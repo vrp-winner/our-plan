@@ -1,16 +1,22 @@
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "GameConfig", menuName = "Game/GameConfig")]
-public class GameConfig : ScriptableObject
+namespace Configs
 {
-    [Header("Time Settings")]
-    public float MaxTimePerTurn = 120f; // 2 นาที (120 วินาที)
-
-    [Header("Action Costs (Time)")]
-    public float CostMoveLocation = 10f;
-    public float CostMoveWithCar = 5f;
-    public float CostWork = 30f;
-    public float CostTrade = 10f;
+    [CreateAssetMenu(fileName = "GameConfig", menuName = "Game/GameConfig")]
+    public class GameConfig : ScriptableObject
+    {
+        // ใช้ [field: SerializeField] เพื่อลดโค้ดและแก้ Warning เรื่อง readonly/unused field
+        // แต่ค่าจะยังปรับใน Inspector ได้เหมือนเดิมนะ
+        
+        [Header("Time Settings")]
+        [field: SerializeField] public float MaxTimePerTurn { get; private set; } = 120f; // อ่านได้อย่างเดียว แก้ไม่ได้
     
-    // ตรงนี้เดี๋ยวค่อยเพิ่มพวกค่าเงิน หรือค่าความเครียดทีหลังได้นะ
+        [Header("Action Costs (Time)")]
+        [field: SerializeField] public float CostMoveLocation { get; private set; } = 10f;
+        [field: SerializeField] public float CostMoveWithCar { get; private set; } = 5f;
+        [field: SerializeField] public float CostWork { get; private set; } = 30f;
+        [field: SerializeField] public float CostTrade { get; private set; } = 10f;
+        
+        // ตรงนี้เดี๋ยวค่อยเพิ่มพวกค่าเงิน หรือค่าความเครียดทีหลังได้นะ
+    }
 }
