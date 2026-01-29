@@ -1101,14 +1101,6 @@ PrefabInstance:
       propertyPath: GlobalObjectIdHash
       value: 1940833858
       objectReference: {fileID: 0}
-    - target: {fileID: 4122800351103190810, guid: 23543dc451da0b54294e5bc508419241, type: 3}
-      propertyPath: SceneMigrationSynchronization
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4122800351103190810, guid: 23543dc451da0b54294e5bc508419241, type: 3}
-      propertyPath: InScenePlacedSourceGlobalObjectIdHash
-      value: 3032437196
-      objectReference: {fileID: 0}
     - target: {fileID: 5358603181612879035, guid: 23543dc451da0b54294e5bc508419241, type: 3}
       propertyPath: m_Name
       value: GameSystem

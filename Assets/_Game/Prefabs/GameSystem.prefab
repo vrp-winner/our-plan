@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 7865400150441970625}
   - component: {fileID: 4122800351103190810}
   - component: {fileID: 3941821379803793277}
+  - component: {fileID: 1249809524679041667}
   m_Layer: 0
   m_Name: GameSystem
   m_TagString: Untagged
@@ -45,14 +46,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 1101716812
-  InScenePlacedSourceGlobalObjectIdHash: 0
+  GlobalObjectIdHash: 1940833858
+  InScenePlacedSourceGlobalObjectIdHash: 3032437196
   DeferredDespawnTick: 0
   Ownership: 1
   AlwaysReplicateAsRoot: 0
   SynchronizeTransform: 1
   ActiveSceneSynchronization: 0
-  SceneMigrationSynchronization: 1
+  SceneMigrationSynchronization: 0
   SpawnWithObservers: 1
   DontDestroyWithOwner: 0
   AutoObjectParentSync: 1
@@ -72,3 +73,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TurnManager
   ShowTopMostFoldoutHeaderGroup: 1
   turnsPerCycle: 4
+--- !u!114 &1249809524679041667
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5358603181612879035}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9b4f8c8fa9c295a4eb4038e13ea543a3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RentManager
+  ShowTopMostFoldoutHeaderGroup: 1
