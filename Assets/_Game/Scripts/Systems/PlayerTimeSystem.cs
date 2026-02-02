@@ -3,7 +3,6 @@ using Unity.Netcode;
 using System;
 using Configs;
 using Managers;
-using UnityEngine.InputSystem;
 
 namespace Systems
 {
@@ -68,8 +67,8 @@ namespace Systems
                 _timeRemaining.Value = gameConfig.MaxTimePerTurn;
             }
         }
-    
-        // ฟังก์ชันสำหรับหักเวลาเมื่อทำ Action (เดิน, ทำงาน)
+
+        // ฟังก์ชันสำหรับหักเวลาเมื่อทำ Action
         public void DeductTime(float amount)
         {
             if (!IsServer) return; // ต้องให้ Server หักให้
@@ -78,10 +77,10 @@ namespace Systems
             if (_timeRemaining.Value <= 0) return;
     
             // เช็คว่ามีเวลาพอไหม? (ถ้าเวลาไม่พอ ห้ามทำ Action)
-            // แต่ถ้ายอมให้ทำจนหมดแม็ก ก็ลบ if นี้ทิ้งได้เลย
-            if (_timeRemaining.Value < amount) 
+            // ใช้ + 0.01f เพื่อกัน Floating Point Error
+            if (_timeRemaining.Value + 0.01f < amount) 
             {
-                Debug.Log($"เวลาไม่พอ! ต้องการ {amount} วินาที แต่เหลือ {_timeRemaining.Value:0} วินาที");
+                Debug.Log($"เวลาไม่พอ! ต้องการ {amount} วินาที แต่เหลือ {_timeRemaining.Value:0.00} วินาที");
                 return; // ยกเลิกการกระทำ
             }
     
@@ -101,17 +100,37 @@ namespace Systems
             }
         }
         
-        // Test: ลองกดปุ่ม Spacebar เพื่อจำลองการทำงาน (เอาออกทีหลัง)
-        private void LateUpdate() {
-            if (IsOwner && Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame) {
-                TestWorkActionRpc();
+        public void RequestAction(float timeCost)
+        {
+            if (IsOwner)
+            {
+                RequestActionServerRpc(timeCost);
             }
         }
-    
+
         [Rpc(SendTo.Server)]
-        private void TestWorkActionRpc() {
-            // สมมติว่าถ้ากดทำงาน จะหักเวลาตาม Config
-            DeductTime(gameConfig.CostWork);
+        private void RequestActionServerRpc(float timeCost)
+        {
+            // เรียกใช้ Logic DeductTime (แบบ Strict Check)
+            DeductTime(timeCost);
+        }
+
+        // ฟังก์ชันสำหรับ Sleep
+        public void SleepAndEndTurn()
+        {
+            if (IsOwner)
+            {
+                SleepServerRpc();
+            }
+        }
+
+        [Rpc(SendTo.Server)]
+        private void SleepServerRpc()
+        {
+            // ไม่ต้องเช็คเวลา (DeductTime) แต่สั่งให้เวลาเป็น 0 แล้วจบเลย
+            _timeRemaining.Value = 0f;
+            Debug.Log("ผู้เล่นกด Sleep -> จบเทิร์นทันที");
+            TurnManager.Instance.ForceEndTurn();
         }
     }
 }

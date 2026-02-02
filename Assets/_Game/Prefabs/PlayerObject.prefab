@@ -17,9 +17,10 @@ GameObject:
   - component: {fileID: -572956979863928199}
   - component: {fileID: 4460960735660631981}
   - component: {fileID: 3768316466702660283}
+  - component: {fileID: -1755146521963141449}
   m_Layer: 0
   m_Name: PlayerObject
-  m_TagString: Untagged
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -158,8 +159,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerTimeSystem
   ShowTopMostFoldoutHeaderGroup: 1
   gameConfig: {fileID: 11400000, guid: 5ef3079c6911d7042b151701f57cf000, type: 2}
-  TimeRemaining:
-    m_InternalValue: 120
 --- !u!195 &-572956979863928199
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -244,3 +243,30 @@ MonoBehaviour:
   SwitchTransformSpaceWhenParented: 0
   Interpolate: 1
   SlerpPosition: 0
+--- !u!54 &-1755146521963141449
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5480560724008698887}
+  serializedVersion: 5
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 1
+  m_IsKinematic: 1
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
