@@ -237,7 +237,7 @@ GameObject:
   - component: {fileID: 144635608}
   - component: {fileID: 144635607}
   - component: {fileID: 144635606}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Building_Home
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -256,7 +256,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c1d88d134dbda054195ace4fb561d54f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Systems.InteractableLocation
-  _locationConfig: {fileID: 11400000, guid: ce2cb3655421b3140aedc42c4492dfd5, type: 2}
+  locationConfig: {fileID: 11400000, guid: ce2cb3655421b3140aedc42c4492dfd5, type: 2}
+  entryPoint: {fileID: 1624652049}
 --- !u!65 &144635607
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -347,7 +348,8 @@ Transform:
   m_LocalPosition: {x: 1, y: 2, z: 11}
   m_LocalScale: {x: 2, y: 4, z: 2}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 1624652049}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &223970425
@@ -1086,7 +1088,7 @@ GameObject:
   - component: {fileID: 740451089}
   - component: {fileID: 740451088}
   - component: {fileID: 740451087}
-  m_Layer: 6
+  m_Layer: 3
   m_Name: Plane
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1903,6 +1905,37 @@ RectTransform:
   m_AnchoredPosition: {x: -200, y: -150}
   m_SizeDelta: {x: 310, y: 50}
   m_Pivot: {x: 1, y: 1}
+--- !u!1 &1624652048
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1624652049}
+  m_Layer: 6
+  m_Name: EntryPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1624652049
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1624652048}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: -0.5, z: -0.75}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 144635610}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1716455131
 GameObject:
   m_ObjectHideFlags: 0
@@ -2107,7 +2140,7 @@ GameObject:
   - component: {fileID: 1819614718}
   - component: {fileID: 1819614717}
   - component: {fileID: 1819614721}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Building_Work
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2204,7 +2237,8 @@ Transform:
   m_LocalPosition: {x: 11, y: 2, z: 0}
   m_LocalScale: {x: 2, y: 4, z: 2}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 1897464215}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1819614721
@@ -2219,7 +2253,39 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c1d88d134dbda054195ace4fb561d54f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Systems.InteractableLocation
-  _locationConfig: {fileID: 11400000, guid: 1937db134d0da4c4fad504c780fc7a26, type: 2}
+  locationConfig: {fileID: 11400000, guid: 1937db134d0da4c4fad504c780fc7a26, type: 2}
+  entryPoint: {fileID: 1897464215}
+--- !u!1 &1897464214
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1897464215}
+  m_Layer: 6
+  m_Name: EntryPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1897464215
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1897464214}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.75, y: -0.5, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1819614720}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2123415690
 GameObject:
   m_ObjectHideFlags: 0

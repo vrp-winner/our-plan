@@ -7,13 +7,17 @@ using Unity.Cinemachine;
 namespace Systems
 {
      /// <summary>
-     /// ควบคุมการเดินของตัวละครด้วย NavMeshAgent (Point & Click)
+     /// ควบคุมการเดินของตัวละครด้วย NavMeshAgent (Click Building -> Walk to EntryPoint)
      /// </summary>
      [RequireComponent(typeof(NavMeshAgent))]
      public class PlayerMovement : NetworkBehaviour
      {
-        [Header("Settings")] [SerializeField]
-        private LayerMask groundLayer; // กำหนดว่า Layer ตรงไหนคือพื้น (กันคลิกโดนกำแพง)
+        [Header("Interaction Settings")] 
+        [SerializeField] private LayerMask interactableLayer; // Layer ของตึก
+        [SerializeField] private LayerMask groundLayer; // Layer พื้น (เผื่ออยากให้เดินบนพื้นได้ที่วๆ)
+        
+        [Header("Movement Settings")]
+        [SerializeField] private bool allowClickGround = false; // ปิดไว้ก่อน ตอนนี้ให้เดินไปที่ตึกเท่านั้น
 
         private NavMeshAgent _agent;
         private Camera _mainCamera;
@@ -22,6 +26,12 @@ namespace Systems
         {
             _agent = GetComponent<NavMeshAgent>();
             _mainCamera = Camera.main;
+            
+            // Tweak NavMeshAgent สำหรับแก้ปัญหาเดินสไลด์
+            // Acceleration สูงๆ จะทำให้เริ่มเดินและหยุดทันที ไม่ไถล
+            _agent.acceleration = 5f; 
+            _agent.angularSpeed = 360f; // หันทันที ไม่ตีวงกว้าง
+            _agent.autoBraking = true;
         }
 
         public override void OnNetworkSpawn()
@@ -41,7 +51,6 @@ namespace Systems
             if (vCam != null)
             {
                 vCam.Follow = this.transform;
-                Debug.Log($"[PlayerMovement] กล้องจับที่ตัวผู้เล่น {name} แล้ว!");
             }
             else
             {
@@ -54,27 +63,38 @@ namespace Systems
             // เช็คว่าเป็นตัวเองมั้ย (ห้ามบังคับตัวเพื่อน)
             if (!IsOwner) return;
 
-            // เช็คว่ากดคลิกขวาหรือไม่ (Mouse Right Click)
-            if (Mouse.current.rightButton.wasPressedThisFrame)
+            // ตรวจจับ Input (รองรับทั้ง Mouse และ Touch ในอนาคตผ่าน InputSystem)
+            if (Mouse.current.leftButton.wasPressedThisFrame)
             {
-                MoveToCursor();
+                HandleClickMovement();
             }
         }
 
-        private void MoveToCursor()
+        private void HandleClickMovement()
         {
-            if (_mainCamera == null) return; // กัน error ถ้าหากล้องไม่เจอ
+            if (_mainCamera == null) return;
             
-            // ยิง Raycast จากหน้าจอไปที่โลก 3D
             Ray ray = _mainCamera.ScreenPointToRay(Mouse.current.position.ReadValue());
+            RaycastHit hit;
 
-            // เช็คว่า Ray ชนพื้น (Ground Layer) มั้ย
-            if (Physics.Raycast(ray, out RaycastHit hit, 100f, groundLayer))
+            // เช็คว่าคลิกโดนตึก (Interactable) มั้ย
+            if (Physics.Raycast(ray, out hit, 100f, interactableLayer))
             {
-                // สั่ง Server ให้เดินไปที่จุดที่คลิก
-                RequestMoveServerRpc(hit.point);
+                // ลองดึง Component InteractableLocation ออกมา
+                if (hit.collider.TryGetComponent(out InteractableLocation location))
+                {
+                    // เดินไปที่จุด Entry Point ของตึกนั้น
+                    Vector3 target = location.GetWalkTarget();
+                    Debug.Log($"[Player] สั่งเดินไปที่: {location.GetLocationName()}");
+                    RequestMoveServerRpc(target);
+                    return; // จบ function ไม่ต้องเช็คพื้นต่อ
+                }
+            }
 
-                // Optional: อาจจะใส่ Effect ลูกศรตรงจุดที่คลิก เป็น aesthetic ได้นะ (ทำทีหลังได้ๆ)
+            // ถ้าไม่ได้คลิกตึก แล้วอนุญาตให้คลิกพื้นได้
+            if (allowClickGround && Physics.Raycast(ray, out hit, 100f, groundLayer))
+            {
+                RequestMoveServerRpc(hit.point);
             }
         }
 
@@ -82,7 +102,10 @@ namespace Systems
         private void RequestMoveServerRpc(Vector3 targetPosition)
         {
             // Server สั่ง NavMeshAgent ให้คำนวณเส้นทางและเดิน
-            _agent.SetDestination(targetPosition);
+            if (_agent.isOnNavMesh)
+            {
+                _agent.SetDestination(targetPosition);
+            }
         }
      }
 }

@@ -194,9 +194,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMovement
   ShowTopMostFoldoutHeaderGroup: 1
-  groundLayer:
+  interactableLayer:
     serializedVersion: 2
     m_Bits: 64
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 8
+  allowClickGround: 0
 --- !u!114 &3768316466702660283
 MonoBehaviour:
   m_ObjectHideFlags: 0
