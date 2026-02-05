@@ -12,6 +12,8 @@ namespace Systems
     
         // ใช้ float เพราะเวลานับถอยหลังมีจุดทศนิยม
         private readonly NetworkVariable<float> _timeRemaining = new NetworkVariable<float>(120f);
+        
+        private bool _isMyTurnActive = false;
     
         public event Action<float> OnTimeChanged;
     
@@ -25,9 +27,8 @@ namespace Systems
                 // เมื่อเริ่มเทิร์นใหม่ ให้รีเซ็ตเวลา
                 if (TurnManager.Instance != null)
                 {
-                    TurnManager.Instance.OnTurnChanged += ResetTime;
+                    TurnManager.Instance.OnPlayerTurnChanged += HandleTurnChange;
                 }
-                ResetTime(0); // รีเซ็ตครั้งแรก
             }
         }
     
@@ -35,7 +36,7 @@ namespace Systems
         {
             if (IsServer && TurnManager.Instance != null)
             {
-                TurnManager.Instance.OnTurnChanged -= ResetTime;
+                TurnManager.Instance.OnPlayerTurnChanged -= HandleTurnChange;
             }
         }
     
@@ -44,8 +45,8 @@ namespace Systems
             // ทำงานเฉพาะที่เครื่อง Server เท่านั้น (Server Authoritative)
             if (!IsServer) return;
     
-            // ถ้ายิ่งมีเวลาเหลือ ให้ลดลงเรื่อยๆ (Real-time Countdown)
-            if (_timeRemaining.Value > 0)
+            // เวลาจะลดก็ต่อเมื่อ _isMyTurnActive เป็นจริงเท่านั้น (ตาผู้เล่นคนไหน คนนั้นเวลาลด)
+            if (_isMyTurnActive && _timeRemaining.Value > 0)
             {
                 _timeRemaining.Value -= Time.deltaTime;
     
@@ -54,17 +55,30 @@ namespace Systems
                 {
                     _timeRemaining.Value = 0;
                     Debug.Log("เวลาหมด! จบเทิร์นอัตโนมัติ");
-                    TurnManager.Instance.ForceEndTurn();
+                    TurnManager.Instance.RequestEndTurnRpc();
                 }
             }
         }
     
-        private void ResetTime(int turnIndex)
+        // ฟังก์ชันสำหรับจัดการเมื่อเปลี่ยนเทิร์น (รับ ID มาเช็ค)
+        private void HandleTurnChange(ulong activePlayerId)
         {
-            // เช็ค gameConfig != null เผื่อลืมลากใส่
-            if (gameConfig != null)
+            // ถ้า ID ที่ส่งมา ตรงกับ ID ของเจ้าของ Object นี้ -> แปลว่าเป็นตาผู้เล่นนั้นๆ
+            if (OwnerClientId == activePlayerId)
             {
-                _timeRemaining.Value = gameConfig.MaxTimePerTurn;
+                _isMyTurnActive = true;
+                
+                // รีเซ็ตเวลาเต็ม
+                if (gameConfig != null)
+                {
+                    _timeRemaining.Value = gameConfig.MaxTimePerTurn;
+                }
+                Debug.Log($"[PlayerTimeSystem] เริ่มเทิร์นผู้เล่น {OwnerClientId} รีเซ็ตเวลาเรียบร้อย");
+            }
+            else
+            {
+                // ไม่ใช่ตาผู้เล่น หยุดเวลา
+                _isMyTurnActive = false;
             }
         }
 
@@ -96,7 +110,7 @@ namespace Systems
             if (_timeRemaining.Value == 0)
             {
                 Debug.Log("ใช้เวลาจนหมดเกลี้ยง! จบเทิร์นทันที");
-                TurnManager.Instance.ForceEndTurn();
+                TurnManager.Instance.RequestEndTurnRpc();
             }
         }
         
@@ -130,7 +144,7 @@ namespace Systems
             // ไม่ต้องเช็คเวลา (DeductTime) แต่สั่งให้เวลาเป็น 0 แล้วจบเลย
             _timeRemaining.Value = 0f;
             Debug.Log("ผู้เล่นกด Sleep -> จบเทิร์นทันที");
-            TurnManager.Instance.ForceEndTurn();
+            TurnManager.Instance.RequestEndTurnRpc();
         }
     }
 }
