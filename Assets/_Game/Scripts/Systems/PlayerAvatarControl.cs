@@ -14,11 +14,11 @@ namespace Systems
         [SerializeField] private Collider col; // Collider ของตัวละคร
 
         // จุดเริ่มต้น (Spawn Point) - อาจจะดึงจาก Scene หรือ Config ในอนาคต
-        private Vector3 startPosition = Vector3.zero; 
+        private Vector3 _startPosition; 
 
         public override void OnNetworkSpawn()
         {
-            startPosition = transform.position; // จำจุดเกิดไว้
+            _startPosition = transform.position; // จำจุดเกิดไว้
 
             if (TurnManager.Instance != null)
             {
@@ -68,14 +68,21 @@ namespace Systems
             // ทุกจอ (Host/Client) จะคำนวณได้ผลลัพธ์เดียวกัน
             bool amITheActiveActor = (OwnerClientId == activePlayerId);
 
+            // แสดงผล (Visuals) -> ทำทั้ง Server และ Client
             UpdateVisuals(amITheActiveActor);
 
-            // ถ้าเป็นตาของ "ตัวนี้" ให้ย้ายกลับจุดเกิด (เฉพาะเจ้าของเครื่องสั่งย้ายได้)
-            if (amITheActiveActor && IsOwner)
+            if (IsServer && amITheActiveActor)
             {
                 var agent = GetComponent<UnityEngine.AI.NavMeshAgent>();
-                if (agent != null) agent.Warp(startPosition);
-                else transform.position = startPosition;
+                if (agent != null) 
+                {
+                    agent.ResetPath(); // เคลียร์เส้นทางเดิมก่อน
+                    agent.Warp(_startPosition); // สั่งย้ายตำแหน่งทันที
+                }
+                else 
+                {
+                    transform.position = _startPosition;
+                }
             }
         }
 

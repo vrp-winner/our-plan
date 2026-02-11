@@ -1,6 +1,6 @@
 using UnityEngine;
 using Configs;
-using UI;
+using Unity.Netcode;
 
 namespace Systems
 {
@@ -16,6 +16,8 @@ namespace Systems
         [Header("Movement Target")]
         [Tooltip("จุดที่ตัวละครจะเดินไปยืนเมื่อคลิกที่ตึกนี้")]
         [SerializeField] private Transform entryPoint;
+        
+        public LocationConfig Config => locationConfig; // เปิดให้ไฟล์อื่นเข้าถึง Config ได้
         
         /// <summary>
         /// Public Getter ให้ PlayerMovement ดึงตำแหน่งไปใช้
@@ -38,26 +40,23 @@ namespace Systems
 
         private void OnTriggerEnter(Collider other)
         {
-            // เช็คว่าสิ่งที่ชนมี PlayerTimeSystem หรือไม่ (เช็คว่าเป็นตัวผู้เล่นไหม)
+            // ทำงานเฉพาะที่ Server (Server Authoritative)
+            if (!NetworkManager.Singleton.IsServer) return;
+            
             if (other.TryGetComponent(out PlayerTimeSystem player))
             {
-                // UI จะขึ้นเฉพาะเครื่องที่เป็น "เจ้าของ" ตัวละครนั้น
-                if (player.IsOwner)
-                {
-                    Debug.Log($"[Interaction] ผู้เล่นเดินเข้าสู่ {locationConfig.LocationName}");
-                    InteractionUIManager.Instance.ShowLocation(locationConfig, player);
-                }
+                // ส่งชื่อ GameObject ของตึกนี้ไปให้ Player (เพื่อส่งต่อให้ Client ทุกคนหาเจอ)
+                player.NotifyLocationEnter(this.gameObject.name);
             }
         }
 
         private void OnTriggerExit(Collider other)
         {
+            if (!NetworkManager.Singleton.IsServer) return;
+            
             if (other.TryGetComponent(out PlayerTimeSystem player))
             {
-                if (player.IsOwner)
-                {
-                    InteractionUIManager.Instance.HideUI();
-                }
+                player.NotifyLocationExit();
             }
         }
     }

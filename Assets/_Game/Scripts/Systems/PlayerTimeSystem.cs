@@ -3,6 +3,7 @@ using Unity.Netcode;
 using System;
 using Configs;
 using Managers;
+using UI;
 
 namespace Systems
 {
@@ -12,7 +13,6 @@ namespace Systems
     
         // ใช้ float เพราะเวลานับถอยหลังมีจุดทศนิยม
         private readonly NetworkVariable<float> _timeRemaining = new NetworkVariable<float>(120f);
-        
         private bool _isMyTurnActive = false;
     
         public event Action<float> OnTimeChanged;
@@ -80,6 +80,60 @@ namespace Systems
                 // ไม่ใช่ตาผู้เล่น หยุดเวลา
                 _isMyTurnActive = false;
             }
+        }
+        
+        // Interaction System (RPCs)
+        // Server เรียกฟังก์ชันนี้เมื่อเดินชนตึก
+        public void NotifyLocationEnter(string locationObjectName)
+        {
+            // สั่ง Client ทุกคน (รวมถึง Host) ให้เปิด UI ของตึกชื่อนี้
+            EnterLocationClientRpc(locationObjectName);
+        }
+
+        public void NotifyLocationExit()
+        {
+            ExitLocationClientRpc();
+        }
+        
+        // เพิ่มฟังก์ชันให้ UI เรียกใช้ เพื่อสั่งปิดหน้าต่างของทุกคน
+        public void RequestCloseInteractionUI()
+        {
+            if (IsOwner)
+            {
+                CloseInteractionUIServerRpc();
+            }
+        }
+
+        [Rpc(SendTo.ClientsAndHost)] // ส่งหาทุกคน
+        private void EnterLocationClientRpc(string locationObjectName)
+        {
+            // ค้นหา GameObject ตึกจากชื่อ
+            GameObject locationObj = GameObject.Find(locationObjectName);
+            if (locationObj != null && locationObj.TryGetComponent(out InteractableLocation loc))
+            {
+                // สั่งเปิด UI โดยส่ง Player เข้าไป
+                // UI จะเช็คว่าเป็น Owner (กดได้) หรือเป็นคนอื่น (ดูเฉยๆ)
+                InteractionUIManager.Instance.ShowLocation(loc.Config, this);
+            }
+        }
+
+        [Rpc(SendTo.ClientsAndHost)]
+        private void ExitLocationClientRpc()
+        {
+            InteractionUIManager.Instance.HideUI();
+        }
+        
+        // RPC สำหรับสั่งปิด UI พร้อมกันทุกคน
+        [Rpc(SendTo.Server)]
+        private void CloseInteractionUIServerRpc()
+        {
+            CloseInteractionUIClientRpc();
+        }
+
+        [Rpc(SendTo.ClientsAndHost)]
+        private void CloseInteractionUIClientRpc()
+        {
+            InteractionUIManager.Instance.HideUI();
         }
 
         // ฟังก์ชันสำหรับหักเวลาเมื่อทำ Action
