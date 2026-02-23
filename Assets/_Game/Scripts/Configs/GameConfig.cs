@@ -7,16 +7,21 @@ namespace Configs
     {
         // ใช้ [field: SerializeField] เพื่อลดโค้ดและแก้ Warning เรื่อง readonly/unused field
         // แต่ค่าจะยังปรับใน Inspector ได้เหมือนเดิมนะ
-        
-        [Header("Time Settings")]
-        [field: SerializeField] public float MaxTimePerTurn { get; private set; } = 120f; // อ่านได้อย่างเดียว แก้ไม่ได้
-    
-        [Header("Action Costs (Time)")]
-        [field: SerializeField] public float CostMoveLocation { get; private set; } = 10f;
-        [field: SerializeField] public float CostMoveWithCar { get; private set; } = 5f;
-        [field: SerializeField] public float CostWork { get; private set; } = 30f;
-        [field: SerializeField] public float CostTrade { get; private set; } = 10f;
-        
+
+        [Header("Point-to-Time System")]
+        [Tooltip("1 Point เท่ากับกี่วินาทีใน UI (เช่น 6 วินาที)")]
+        [SerializeField] private int secondsPerPoint = 6;
+        public int SecondsPerPoint => secondsPerPoint;
+
+        [Header("Energy (Points) per Turn")]
+        [SerializeField] private int maxPointsPerTurn = 20; // 20 points * 6s = 120s (2 mins)
+        public int MaxPointsPerTurn => maxPointsPerTurn;
+
+        [Header("Action Costs (Points)")]
+        public int CostMove = 2;       // 12s
+        public int CostWork = 5;       // 30s
+        public int CostSickPenalty = 5;
+
         // ตรงนี้เดี๋ยวค่อยเพิ่มพวกค่าเงิน หรือค่าความเครียดทีหลังได้นะ
     }
 }

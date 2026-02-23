@@ -43,7 +43,7 @@ namespace Systems
             // ทำงานเฉพาะที่ Server (Server Authoritative)
             if (!NetworkManager.Singleton.IsServer) return;
             
-            if (other.TryGetComponent(out PlayerTimeSystem player))
+            if (other.TryGetComponent(out PlayerPointSystem player))
             {
                 // ส่งชื่อ GameObject ของตึกนี้ไปให้ Player (เพื่อส่งต่อให้ Client ทุกคนหาเจอ)
                 player.NotifyLocationEnter(this.gameObject.name);
@@ -54,7 +54,7 @@ namespace Systems
         {
             if (!NetworkManager.Singleton.IsServer) return;
             
-            if (other.TryGetComponent(out PlayerTimeSystem player))
+            if (other.TryGetComponent(out PlayerPointSystem player))
             {
                 player.NotifyLocationExit();
             }
