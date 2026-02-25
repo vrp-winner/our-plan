@@ -3,6 +3,7 @@ using Unity.Netcode;
 using UnityEngine.AI; // สำหรับ NavMesh
 using UnityEngine.InputSystem; // สำหรับรับค่าเมาส์
 using Unity.Cinemachine;
+using Managers;
 
 namespace Systems
 {
@@ -42,28 +43,31 @@ namespace Systems
                 SetupCamera();
             }
         }
-        
+
         private void SetupCamera()
         {
-            // หา Cinemachine Camera ในฉาก
-            var vCam = FindFirstObjectByType<CinemachineCamera>();
+            if (!IsOwner) return; // ต้องมั่นใจว่ารันเฉพาะเจ้าของเครื่องเท่านั้น
 
+            var vCam = FindFirstObjectByType<CinemachineCamera>();
             if (vCam != null)
             {
-                vCam.Follow = this.transform;
-            }
-            else
-            {
-                Debug.LogError("[PlayerMovement] หา CinemachineCamera ไม่เจอในฉาก!");
+                vCam.Follow = this.transform; // ให้กล้องตามเฉพาะตัวเราเอง
             }
         }
 
         private void Update()
         {
-            // เช็คว่าเป็นตัวเองมั้ย (ห้ามบังคับตัวเพื่อน)
-            if (!IsOwner) return;
+            if (!IsOwner || !IsSpawned) return;
 
-            // ตรวจจับ Input (รองรับทั้ง Mouse และ Touch ในอนาคตผ่าน InputSystem)
+            if (TurnManager.Instance == null || !TurnManager.Instance.IsGameStarted) return;
+
+            ulong activeId = TurnManager.Instance.CurrentActivePlayerId;
+
+            if (NetworkManager.Singleton.LocalClientId != activeId)
+            {
+                return; 
+            }
+
             if (Mouse.current.leftButton.wasPressedThisFrame)
             {
                 HandleClickMovement();

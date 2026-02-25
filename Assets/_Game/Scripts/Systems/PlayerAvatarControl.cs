@@ -16,6 +16,7 @@ namespace Systems
         // จุดเริ่มต้น (Spawn Point) - อาจจะดึงจาก Scene หรือ Config ในอนาคต
         private Vector3 _startPosition; 
 
+
         public override void OnNetworkSpawn()
         {
             _startPosition = transform.position; // จำจุดเกิดไว้

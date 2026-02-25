@@ -3,6 +3,7 @@ using TMPro;
 using UnityEngine.UI;
 using Configs;
 using Systems;
+using Managers;
 
 namespace UI
 {
@@ -31,17 +32,22 @@ namespace UI
         public void ShowLocation(LocationConfig config, PlayerPointSystem player)
         {
             _currentUser = player;
-            bool isMyCharacter = player.IsOwner;
+
+            // เช็คว่าผู้เล่นที่มาแตะตึก คือคนที่มีเทิร์นปัจจุบันหรือไม่
+            bool isMyTurn = (player.OwnerClientId == TurnManager.Instance.CurrentActivePlayerId);
+            bool isOwner = player.IsOwner; // เป็นตัวละครของเราเองไหม
 
             locationNameText.text = config.LocationName;
-            descriptionText.text = isMyCharacter ? config.Description : $"[Player {player.OwnerClientId}] is visiting here...";
-            closeButton.gameObject.SetActive(isMyCharacter);
+
+            // ถ้าไม่ใช่ตาของเรา ให้แสดงข้อความบอก
+            descriptionText.text = isMyTurn ? config.Description : "It's not your turn yet...";
 
             foreach (Transform child in actionButtonsContainer) Destroy(child.gameObject);
 
             foreach (var action in config.AvailableActions)
             {
-                CreateActionButton(action, isMyCharacter);
+                // ปุ่มจะกดได้ (Interactable) เฉพาะเมื่อเป็นเจ้าของตัวละครและเป็นตาของเขาเท่านั้น
+                CreateActionButton(action, isOwner && isMyTurn);
             }
 
             panelRoot.SetActive(true);

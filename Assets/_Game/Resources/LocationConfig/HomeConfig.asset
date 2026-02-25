@@ -16,4 +16,4 @@ MonoBehaviour:
   <Description>k__BackingField: Rest
   <AvailableActions>k__BackingField:
   - <ActionName>k__BackingField: Sleep
-    <TimeCost>k__BackingField: 120
+    <PointCost>k__BackingField: 10

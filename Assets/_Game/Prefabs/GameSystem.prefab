@@ -11,7 +11,9 @@ GameObject:
   - component: {fileID: 7865400150441970625}
   - component: {fileID: 4122800351103190810}
   - component: {fileID: 3941821379803793277}
-  - component: {fileID: 1249809524679041667}
+  - component: {fileID: -3075915136331972885}
+  - component: {fileID: -2941593709554513382}
+  - component: {fileID: 1573185047811088978}
   m_Layer: 0
   m_Name: GameSystem
   m_TagString: Untagged
@@ -46,7 +48,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 1940833858
+  GlobalObjectIdHash: 3032437196
   InScenePlacedSourceGlobalObjectIdHash: 3032437196
   DeferredDespawnTick: 0
   Ownership: 1
@@ -73,7 +75,23 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TurnManager
   ShowTopMostFoldoutHeaderGroup: 1
   turnsPerCycle: 4
---- !u!114 &1249809524679041667
+--- !u!114 &-3075915136331972885
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5358603181612879035}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 83d56ae31a37d264a9972faeae6226b8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Managers.EconomyManager
+  ShowTopMostFoldoutHeaderGroup: 1
+  JointMoney:
+    m_InternalValue: 1000
+  taxEate: 0.04
+--- !u!114 &-2941593709554513382
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -84,5 +102,18 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9b4f8c8fa9c295a4eb4038e13ea543a3, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::RentManager
+  m_EditorClassIdentifier: Assembly-CSharp::Managers.RentManager
+  ShowTopMostFoldoutHeaderGroup: 1
+--- !u!114 &1573185047811088978
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5358603181612879035}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c19df070e010b440eb4a10e22d150405, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Managers.StatusManager
   ShowTopMostFoldoutHeaderGroup: 1

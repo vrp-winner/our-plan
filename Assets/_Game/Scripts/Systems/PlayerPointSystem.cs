@@ -1,8 +1,8 @@
 using UnityEngine;
 using Unity.Netcode;
+using Managers;
 using System;
 using Configs;
-using Managers;
 using UI;
 
 namespace Systems
@@ -38,7 +38,6 @@ namespace Systems
             }
         }
 
-        // --- ระบบจัดการแต้ม (Server Authoritative) ---
 
         [Rpc(SendTo.Server)]
         public void UsePointsServerRpc(int pointAmount)
@@ -47,15 +46,10 @@ namespace Systems
 
             int finalCost = pointAmount;
 
-            // Mechanic: ถ้าป่วย จะเสียแต้มเพิ่มขึ้นตามที่ตั้งไว้ใน Config
             if (_isSick) finalCost += gameConfig.CostSickPenalty;
 
-            // หักแต้ม
             _pointsRemaining.Value = Mathf.Max(0, _pointsRemaining.Value - finalCost);
 
-            Debug.Log($"[Player {OwnerClientId}] ใช้ไป {finalCost} แต้ม เหลือ {_pointsRemaining.Value} แต้ม");
-
-            // ถ้าแต้มหมด ให้สั่งจบเทิร์นผ่าน TurnManager
             if (_pointsRemaining.Value <= 0)
             {
                 TurnManager.Instance.RequestEndTurnRpc();
@@ -149,5 +143,12 @@ namespace Systems
             }
         }
         // ฟังก์ชันอื่นๆ (NotifyLocationExit, CloseUI) คงเดิมไว้ได้เลย
+        public void OnEnterHome()
+        {
+            if (IsServer)
+            {
+                StatusManager.Instance.ProcessHomeEntry(this.GetComponent<PlayerStatus>());
+            }
+        }
     }
 }

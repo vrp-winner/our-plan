@@ -19,6 +19,7 @@ GameObject:
   - component: {fileID: 4460960735660631981}
   - component: {fileID: 3768316466702660283}
   - component: {fileID: 8811752308180071666}
+  - component: {fileID: 3630309084394093359}
   m_Layer: 0
   m_Name: PlayerObject
   m_TagString: Player
@@ -290,3 +291,16 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   visualModel: {fileID: 5480560724008698887}
   col: {fileID: 1191252213824709209}
+--- !u!114 &3630309084394093359
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5480560724008698887}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f87e083d41a474823a3314f9a203949d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Systems.PlayerStatus
+  ShowTopMostFoldoutHeaderGroup: 1
