@@ -17,3 +17,6 @@ MonoBehaviour:
   <AvailableActions>k__BackingField:
   - <ActionName>k__BackingField: "\u0E2D\u0E32\u0E2B\u0E32\u0E23 1"
     <PointCost>k__BackingField: 3
+    <RelationshipEffect>k__BackingField: 15
+    <StressEffect>k__BackingField: -25
+    <MoneyEffect>k__BackingField: 0

@@ -8,7 +8,12 @@ namespace Configs
     {
         [field: SerializeField] public string ActionName { get; private set; }
         // เปลี่ยนจาก float เป็น int เพื่อใช้เป็นแต้ม (Point)
+       
+        [Header("Effects on Player")]
         [field: SerializeField] public int PointCost { get; private set; }
+        [field: SerializeField] public int RelationshipEffect { get; private set; }
+        [field: SerializeField] public int StressEffect { get; private set; }
+        [field: SerializeField] public float MoneyEffect { get; private set; }
     }
 
     [CreateAssetMenu(fileName = "LocationConfig", menuName = "Game/LocationConfig")]

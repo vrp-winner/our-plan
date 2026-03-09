@@ -87,9 +87,9 @@ namespace Systems
             }
         }
 
+     
         private void UpdateVisuals(bool isActive)
         {
-            // เปิด/ปิด Model และ Collider
             if (visualModel != null) visualModel.SetActive(isActive);
             if (col != null) col.enabled = isActive;
         }

@@ -17,5 +17,11 @@ MonoBehaviour:
   <AvailableActions>k__BackingField:
   - <ActionName>k__BackingField: Deposit
     <PointCost>k__BackingField: 2
+    <RelationshipEffect>k__BackingField: 0
+    <StressEffect>k__BackingField: 0
+    <MoneyEffect>k__BackingField: 0
   - <ActionName>k__BackingField: Pay Rent
     <PointCost>k__BackingField: 2
+    <RelationshipEffect>k__BackingField: 5
+    <StressEffect>k__BackingField: -5
+    <MoneyEffect>k__BackingField: 0

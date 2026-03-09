@@ -105,12 +105,16 @@ namespace Managers
         public void RequestEndTurnRpc()
         {
             int nextIndex = _currentPlayerIndex.Value + 1;
-            if (nextIndex >= _playerIds.Count)
+
+            if (nextIndex >= _playerIds.Count) 
             {
                 nextIndex = 0;
                 _currentRound.Value++;
-                int calcCycle = ((_currentRound.Value - 1) / turnsPerCycle) + 1;
-                if (calcCycle > _currentCycle.Value) _currentCycle.Value = calcCycle;
+
+                if (_currentRound.Value > 1 && (_currentRound.Value - 1) % 3 == 0)
+                {
+                    EconomyManager.Instance.ProcessRentCollectionServerRpc();
+                }
             }
             _currentPlayerIndex.Value = nextIndex;
         }

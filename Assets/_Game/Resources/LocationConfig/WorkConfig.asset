@@ -17,3 +17,6 @@ MonoBehaviour:
   <AvailableActions>k__BackingField:
   - <ActionName>k__BackingField: Work Hard
     <PointCost>k__BackingField: 10
+    <RelationshipEffect>k__BackingField: 0
+    <StressEffect>k__BackingField: 10
+    <MoneyEffect>k__BackingField: 500

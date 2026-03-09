@@ -42,7 +42,7 @@ namespace Systems
         [Rpc(SendTo.Server)]
         public void UsePointsServerRpc(int pointAmount)
         {
-            if (_pointsRemaining.Value <= 0) return;
+            if (_pointsRemaining.Value < pointAmount) return;
 
             int finalCost = pointAmount;
 

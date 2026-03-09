@@ -58,8 +58,7 @@ namespace UI
             Button btn = Instantiate(actionButtonPrefab, actionButtonsContainer);
             var btnText = btn.GetComponentInChildren<TextMeshProUGUI>();
 
-            // แสดงผลเป็นวินาทีเพื่อให้ผู้เล่นรู้สึกเหมือนใช้เวลา (แต้ม * 6)
-            // สมมติว่าดึงค่า SecondsPerPoint มาใช้ หรือเขียนเลข 6 ไปก่อนเพื่อทดสอบ
+           
             if (btnText != null) btnText.text = $"{action.ActionName} (-{action.PointCost * 6}s)";
 
             btn.interactable = isInteractive;
@@ -73,14 +72,26 @@ namespace UI
         private void OnActionClicked(LocationAction action)
         {
             var playerRef = _currentUser;
+            if (playerRef == null || !playerRef.IsOwner) return;
+
             HideUI();
+            playerRef.RequestCloseInteractionUI();
 
-            if (playerRef != null && playerRef.IsOwner)
+            if (action.ActionName == "Sleep")
             {
-                playerRef.RequestCloseInteractionUI();
+                playerRef.SleepAndEndTurn();
+                return;
+            }
 
-                if (action.ActionName == "Sleep") playerRef.SleepAndEndTurn();
-                else playerRef.RequestAction(action.PointCost); // ส่งค่าแต้มไปหัก
+            playerRef.UsePointsServerRpc(action.PointCost);
+
+            if (playerRef.TryGetComponent(out PlayerStatus status))
+            {
+                status.ModifyStatsServerRpc(
+                    action.RelationshipEffect,
+                    action.StressEffect,
+                    action.MoneyEffect
+                );
             }
         }
 

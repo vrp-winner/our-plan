@@ -22,9 +22,16 @@ namespace UI
                 TurnManager.Instance.OnPlayerTurnChanged += UpdateTargetPlayer;
             }
         }
-
+        private void OnStatsChanged(int oldV, int newV) => RefreshUI();
+        private void OnMoneyChanged(float oldV, float newV) => RefreshUI();
         private void UpdateTargetPlayer(ulong activePlayerId)
         {
+            if (_currentStatus != null)
+            {
+                _currentStatus.Relationship.OnValueChanged -= OnStatsChanged;
+                _currentStatus.Stress.OnValueChanged -= OnStatsChanged;
+                _currentStatus.PersonalMoney.OnValueChanged -= OnMoneyChanged;
+            }
             foreach (var netObj in NetworkManager.Singleton.SpawnManager.SpawnedObjects.Values)
             {
                 if (netObj.OwnerClientId == activePlayerId)
@@ -32,11 +39,10 @@ namespace UI
                     _currentStatus = netObj.GetComponent<PlayerStatus>();
                     if (_currentStatus != null)
                     {
+                        _currentStatus.Relationship.OnValueChanged += OnStatsChanged;
+                        _currentStatus.Stress.OnValueChanged += OnStatsChanged;
+                        _currentStatus.PersonalMoney.OnValueChanged += OnMoneyChanged;
                         RefreshUI();
-
-                        _currentStatus.Relationship.OnValueChanged += (oldV, newV) => RefreshUI();
-                        _currentStatus.Stress.OnValueChanged += (oldV, newV) => RefreshUI();
-                        _currentStatus.PersonalMoney.OnValueChanged += (oldV, newV) => RefreshUI();
                     }
                     break;
                 }
