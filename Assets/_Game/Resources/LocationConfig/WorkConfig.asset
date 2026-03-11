@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a56ed523c3bf1634c97a00a58a9ab376, type: 3}
+  m_Name: WorkConfig
+  m_EditorClassIdentifier: Assembly-CSharp::Configs.LocationConfig
+  <LocationName>k__BackingField: Office
+  <Description>k__BackingField: Earn Money!
+  <AvailableActions>k__BackingField:
+  - <ActionName>k__BackingField: Work Hard
+    <PointCost>k__BackingField: 10
+    <RelationshipEffect>k__BackingField: 0
+    <StressEffect>k__BackingField: 10
+    <MoneyEffect>k__BackingField: 500
