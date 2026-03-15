@@ -14,28 +14,51 @@ namespace Systems
         [SerializeField] private Collider col; // Collider ของตัวละคร
 
         // จุดเริ่มต้น (Spawn Point) - อาจจะดึงจาก Scene หรือ Config ในอนาคต
-        private Vector3 _startPosition; 
+        private Vector3 _startPosition;
+        private PlayerStatus _playerStatus;
+
+        [Header("Character Models (4 Types)")]
+        [Tooltip("ใส่โมเดล 4 แบบ เรียงตามลำดับ: ทีม1คน1, ทีม1คน2, ทีม2คน1, ทีม2คน2")]
+        [SerializeField] private GameObject[] modelVariants;
 
 
         public override void OnNetworkSpawn()
         {
             _startPosition = transform.position; // จำจุดเกิดไว้
 
+            if (_playerStatus != null)
+            {
+                _playerStatus.TeamId.OnValueChanged += (oldV, newV) => SetupModelVariant();
+                _playerStatus.MemberIndex.OnValueChanged += (oldV, newV) => SetupModelVariant();
+                SetupModelVariant(); // เรียกใช้เผื่อตั้งค่าเสร็จก่อน OnNetworkSpawn
+            }
+
             if (TurnManager.Instance != null)
             {
                 TurnManager.Instance.OnPlayerTurnChanged += CheckTurnVisibility;
-                // พิ่ม Event เช็คว่าเกมเริ่มหรือยัง เพื่อซ่อนตัวตอนแรก
                 TurnManager.Instance.OnGameStateChanged += OnGameStateChanged;
 
-                // เช็คสถานะตอนเกิด
                 if (TurnManager.Instance.IsGameStarted)
                 {
                     CheckTurnVisibility(TurnManager.Instance.CurrentActivePlayerId);
                 }
                 else
                 {
-                    // ถ้าเกมยังไม่เริ่ม ซ่อนไปก่อนเลย
                     UpdateVisuals(false);
+                }
+            }
+        }
+        private void SetupModelVariant()
+        {
+            if (modelVariants == null || modelVariants.Length == 0) return;
+
+            int targetIndex = _playerStatus.AvatarIndex.Value;
+
+            for (int i = 0; i < modelVariants.Length; i++)
+            {
+                if (modelVariants[i] != null)
+                {
+                    modelVariants[i].SetActive(i == targetIndex);
                 }
             }
         }
@@ -62,32 +85,30 @@ namespace Systems
             }
         }
 
-        private void CheckTurnVisibility(ulong activePlayerId)
+        private void CheckTurnVisibility(ulong activeActorId)
         {
-            // Logic: "ตัวละครนี้" คือเจ้าของเทิร์นใช่ไหม? 
-            // (ถ้า OwnerClientId ของตัวนี้ ตรงกับ activePlayerId แปลว่าถึงคิวแสดงของตัวนี้)
-            // ทุกจอ (Host/Client) จะคำนวณได้ผลลัพธ์เดียวกัน
-            bool amITheActiveActor = (OwnerClientId == activePlayerId);
+            // เปลี่ยนจาก OwnerClientId เป็น this.NetworkObjectId
+            bool amITheActiveActor = (this.NetworkObjectId == activeActorId);
 
-            // แสดงผล (Visuals) -> ทำทั้ง Server และ Client
+            // สั่งแสดงผลเฉพาะถ้าผลเป็น true
             UpdateVisuals(amITheActiveActor);
 
             if (IsServer && amITheActiveActor)
             {
                 var agent = GetComponent<UnityEngine.AI.NavMeshAgent>();
-                if (agent != null) 
+                if (agent != null)
                 {
-                    agent.ResetPath(); // เคลียร์เส้นทางเดิมก่อน
-                    agent.Warp(_startPosition); // สั่งย้ายตำแหน่งทันที
+                    agent.ResetPath();
+                    agent.Warp(_startPosition);
                 }
-                else 
+                else
                 {
                     transform.position = _startPosition;
                 }
             }
         }
 
-     
+
         private void UpdateVisuals(bool isActive)
         {
             if (visualModel != null) visualModel.SetActive(isActive);

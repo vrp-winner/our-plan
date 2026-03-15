@@ -24,7 +24,7 @@ namespace UI
         }
         private void OnStatsChanged(int oldV, int newV) => RefreshUI();
         private void OnMoneyChanged(float oldV, float newV) => RefreshUI();
-        private void UpdateTargetPlayer(ulong activePlayerId)
+        private void UpdateTargetPlayer(ulong activeActorId)
         {
             if (_currentStatus != null)
             {
@@ -32,19 +32,17 @@ namespace UI
                 _currentStatus.Stress.OnValueChanged -= OnStatsChanged;
                 _currentStatus.PersonalMoney.OnValueChanged -= OnMoneyChanged;
             }
-            foreach (var netObj in NetworkManager.Singleton.SpawnManager.SpawnedObjects.Values)
+
+            // เลิกใช้ foreach แล้วใช้ TryGetValue ดึงตัวละครออกมาตรงๆ
+            if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(activeActorId, out var netObj))
             {
-                if (netObj.OwnerClientId == activePlayerId)
+                _currentStatus = netObj.GetComponent<PlayerStatus>();
+                if (_currentStatus != null)
                 {
-                    _currentStatus = netObj.GetComponent<PlayerStatus>();
-                    if (_currentStatus != null)
-                    {
-                        _currentStatus.Relationship.OnValueChanged += OnStatsChanged;
-                        _currentStatus.Stress.OnValueChanged += OnStatsChanged;
-                        _currentStatus.PersonalMoney.OnValueChanged += OnMoneyChanged;
-                        RefreshUI();
-                    }
-                    break;
+                    _currentStatus.Relationship.OnValueChanged += OnStatsChanged;
+                    _currentStatus.Stress.OnValueChanged += OnStatsChanged;
+                    _currentStatus.PersonalMoney.OnValueChanged += OnMoneyChanged;
+                    RefreshUI();
                 }
             }
         }

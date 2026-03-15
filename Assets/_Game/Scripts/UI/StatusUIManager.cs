@@ -20,7 +20,7 @@ namespace UI
                 TurnManager.Instance.OnPlayerTurnChanged += UpdateActivePlayerUI;
         }
 
-        private void UpdateActivePlayerUI(ulong activePlayerId)
+        private void UpdateActivePlayerUI(ulong activeActorId)
         {
             if (_activeStatus != null)
             {
@@ -28,19 +28,15 @@ namespace UI
                 _activeStatus.Stress.OnValueChanged -= (oldV, newV) => SyncFill(stressRing, newV);
             }
 
-            foreach (var netObj in NetworkManager.Singleton.SpawnManager.SpawnedObjects.Values)
+            if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(activeActorId, out var netObj))
             {
-                if (netObj.OwnerClientId == activePlayerId)
+                _activeStatus = netObj.GetComponent<PlayerStatus>();
+                if (_activeStatus != null)
                 {
-                    _activeStatus = netObj.GetComponent<PlayerStatus>();
-                    if (_activeStatus != null)
-                    {
-                        _activeStatus.Relationship.OnValueChanged += (oldV, newV) => SyncFill(relationshipRing, newV);
-                        _activeStatus.Stress.OnValueChanged += (oldV, newV) => SyncFill(stressRing, newV);
-                        SyncFill(relationshipRing, _activeStatus.Relationship.Value);
-                        SyncFill(stressRing, _activeStatus.Stress.Value);
-                    }
-                    break;
+                    _activeStatus.Relationship.OnValueChanged += (oldV, newV) => SyncFill(relationshipRing, newV);
+                    _activeStatus.Stress.OnValueChanged += (oldV, newV) => SyncFill(stressRing, newV);
+                    SyncFill(relationshipRing, _activeStatus.Relationship.Value);
+                    SyncFill(stressRing, _activeStatus.Stress.Value);
                 }
             }
         }

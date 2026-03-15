@@ -56,13 +56,13 @@ namespace Systems
             }
         }
 
-        private void HandleTurnChange(ulong activePlayerId)
+        private void HandleTurnChange(ulong activeActorId)
         {
-            if (OwnerClientId == activePlayerId)
+            // เปลี่ยนจาก OwnerClientId เป็นเช็ค NetworkObjectId
+            if (this.NetworkObjectId == activeActorId)
             {
-                // เริ่มเทิร์นใหม่ รีเซ็ตแต้มให้เต็มตาม Config
                 _pointsRemaining.Value = gameConfig.MaxPointsPerTurn;
-                Debug.Log($"[PlayerPointSystem] เริ่มเทิร์นผู้เล่น {OwnerClientId} รีเซ็ตเป็น {gameConfig.MaxPointsPerTurn} แต้ม");
+                Debug.Log($"[PlayerPointSystem] เริ่มเทิร์นตัวละคร {this.NetworkObjectId} รีเซ็ตเป็น {gameConfig.MaxPointsPerTurn} แต้ม");
             }
         }
 

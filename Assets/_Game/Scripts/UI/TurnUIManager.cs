@@ -13,7 +13,6 @@ namespace UI
         [SerializeField] private TextMeshProUGUI cycleText;
         [SerializeField] private TextMeshProUGUI timeText;
 
-        // เปลี่ยน Reference เป็น PlayerPointSystem
         private PlayerPointSystem _activePlayerPointSystem;
 
         private void Start()
@@ -26,25 +25,19 @@ namespace UI
             }
         }
 
-        private void OnPlayerTurnChanged(ulong activePlayerId)
+        private void OnPlayerTurnChanged(ulong activeActorId)
         {
-            // ล้างการฟัง Event ของคนเก่า
             if (_activePlayerPointSystem != null)
             {
                 _activePlayerPointSystem.OnVirtualTimeChanged -= UpdateTimeUI;
             }
 
-            foreach (var netObj in NetworkManager.Singleton.SpawnManager.SpawnedObjects.Values)
+            if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(activeActorId, out var netObj))
             {
-                if (netObj.OwnerClientId == activePlayerId)
+                _activePlayerPointSystem = netObj.GetComponent<PlayerPointSystem>();
+                if (_activePlayerPointSystem != null)
                 {
-                    _activePlayerPointSystem = netObj.GetComponent<PlayerPointSystem>();
-                    if (_activePlayerPointSystem != null)
-                    {
-                        // ฟัง Event "เวลาจำลอง" ที่ถูกคำนวณมาแล้วจาก PointSystem
-                        _activePlayerPointSystem.OnVirtualTimeChanged += UpdateTimeUI;
-                    }
-                    break;
+                    _activePlayerPointSystem.OnVirtualTimeChanged += UpdateTimeUI;
                 }
             }
         }

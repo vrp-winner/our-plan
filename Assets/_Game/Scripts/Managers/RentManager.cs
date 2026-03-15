@@ -6,11 +6,8 @@ namespace Managers
 {
     public class RentManager : SingletonNetwork<RentManager>
     {
-
-
         public override void OnNetworkSpawn()
         {
-
             if (IsServer && TurnManager.Instance != null)
             {
                 TurnManager.Instance.OnCycleChanged += HandleCycleEnd;
@@ -21,12 +18,11 @@ namespace Managers
         {
             if (!IsServer) return;
 
-            
-            foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
+            // ค้นหาตัวละครทั้งหมดแทน
+            var allPlayers = GameObject.FindObjectsByType<PlayerStatus>(FindObjectsSortMode.None);
+            foreach (var status in allPlayers)
             {
-                if (client.PlayerObject.TryGetComponent(out PlayerStatus status))
-                {
-                }
+                // โค้ดที่ต้องการให้รันทุกรอบเดือนใส่ตรงนี้
             }
         }
 

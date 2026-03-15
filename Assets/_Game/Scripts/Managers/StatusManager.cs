@@ -18,12 +18,11 @@ namespace Managers
                 _ => 0
             };
 
-            foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
+            // แก้ไข: ค้นหาตัวละครทั้งหมดแทนการค้นหาตาม Client
+            var allPlayers = GameObject.FindObjectsByType<PlayerStatus>(FindObjectsSortMode.None);
+            foreach (var status in allPlayers)
             {
-                if (client.PlayerObject.TryGetComponent(out PlayerStatus status))
-                {
-                    status.ModifyStatsServerRpc(-penalty, penalty); // หัก Rel, เพิ่ม Stress
-                }
+                status.ModifyStatsServerRpc(-penalty, penalty); // หัก Rel, เพิ่ม Stress
             }
         }
 

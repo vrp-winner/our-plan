@@ -1,129 +1,196 @@
 using UnityEngine;
 using Unity.Netcode;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Managers
 {
     public class TurnManager : SingletonNetwork<TurnManager>
     {
-        [Header("Settings")]
-        [SerializeField] private int playerRequired = 2; // บังคับ 2 คนตามโหมดปกติ
-        [SerializeField] private int turnsPerCycle = 4;
+        #region Variables & Events
+        [Header("Team Settings")]
+        [SerializeField] private int playerRequired = 2;
+        [SerializeField] private int totalActors = 4;
 
-        // Network Variables
-        private NetworkList<ulong> _playerIds;
+        [Header("Game Length Settings")]
+        [SerializeField] private int maxCycles = 15;
+
+        [Header("Spawning Setup")]
+        [SerializeField] private GameObject playerPrefab;
+        [SerializeField] private Transform centerSpawnPoint;
+
+        private Dictionary<ulong, int> _playerSelectedAvatars = new Dictionary<ulong, int>();
+
+        public event Action<ulong, int> OnAvatarAssigned;
+
+        public NetworkVariable<ulong> ActiveActorNetworkId = new NetworkVariable<ulong>(0);
+
         private NetworkVariable<bool> _isGameStarted = new NetworkVariable<bool>(false);
-        private NetworkVariable<int> _currentPlayerIndex = new NetworkVariable<int>(0);
+        private NetworkVariable<int> _currentActorIndex = new NetworkVariable<int>(0);
         private NetworkVariable<int> _currentRound = new NetworkVariable<int>(0);
-        private NetworkVariable<int> _currentCycle = new NetworkVariable<int>(0);
+        private NetworkVariable<int> _currentCycle = new NetworkVariable<int>(1);
+
+        private List<NetworkObject> _playerActors = new List<NetworkObject>();
 
         public event Action<ulong> OnPlayerTurnChanged;
         public event Action<int> OnRoundChanged;
         public event Action<int> OnCycleChanged;
-        public event Action<ulong, bool, string> OnGameOver;
         public event Action<bool> OnGameStateChanged;
+        #endregion
 
+        #region Properties
         public bool IsGameStarted => _isGameStarted.Value;
+        public void SetPlayerRequired(int count) => playerRequired = count;
+        public int GetPlayerRequired() => playerRequired;
+
+        public void SetMaxCycles(int cycles) => maxCycles = cycles;
+        public int GetMaxCycles() => maxCycles;
+
         public ulong CurrentActivePlayerId
         {
             get
             {
-                if (!IsSpawned || _playerIds == null || _playerIds.Count == 0)
-                    return 99999;
-
-                if (_currentPlayerIndex.Value >= _playerIds.Count)
-                    return _playerIds[0];
-
-                return _playerIds[_currentPlayerIndex.Value];
+                if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(ActiveActorNetworkId.Value, out var activeObj))
+                {
+                    return activeObj.OwnerClientId;
+                }
+                return 99999;
             }
         }
+        #endregion
 
+        #region Unity Logic
         protected override void Awake()
         {
             base.Awake();
-            _playerIds = new NetworkList<ulong>();
         }
 
         public override void OnNetworkSpawn()
         {
-            base.OnNetworkSpawn();
-            if (IsServer) NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
-            _isGameStarted.OnValueChanged += (_, newValue) => OnGameStateChanged?.Invoke(newValue);
+            _isGameStarted.OnValueChanged += (oldV, newV) => OnGameStateChanged?.Invoke(newV);
+            _currentActorIndex.OnValueChanged += (oldV, newVal) => NotifyTurnChange();
 
-            _currentPlayerIndex.OnValueChanged += (_, newValue) => NotifyTurnChange();
-            _currentRound.OnValueChanged += (_, newValue) => OnRoundChanged?.Invoke(newValue);
-            _currentCycle.OnValueChanged += (_, newValue) => OnCycleChanged?.Invoke(newValue);
-        }
-        public override void OnNetworkDespawn()
-        {
-            base.OnNetworkDespawn();
-            if (IsServer && NetworkManager.Singleton != null)
-            {
-                NetworkManager.Singleton.OnClientConnectedCallback -= OnClientConnected;
-            }
-
-            if (_playerIds != null)
-            {
-                _playerIds.Dispose();
-            }
-        }
-
-        private void OnClientConnected(ulong clientId)
-        {
             if (IsServer)
             {
-                if (!_playerIds.Contains(clientId)) // ป้องกันการเพิ่ม ID ซ้ำ
+                NetworkManager.Singleton.OnClientConnectedCallback += (id) =>
                 {
-                    _playerIds.Add(clientId);
-                    Debug.Log($"[TurnManager] Player {clientId} Connected. Total: {_playerIds.Count}");
-                }
-
-                if (_playerIds.Count >= playerRequired && !IsGameStarted)
-                {
-                    StartGame();
-                }
+                    if (NetworkManager.Singleton.ConnectedClients.Count >= playerRequired && !IsGameStarted)
+                    {
+                        Debug.Log("Clients Ready. Please Start Game.");
+                    }
+                };
             }
         }
-
-        public void StartGame()
+        public void RegisterPlayerAvatar(ulong clientId, int avatarIndex)
         {
-            if (!IsServer) return;
-            _isGameStarted.Value = true;
-            _currentRound.Value = 1;
-            _currentCycle.Value = 1;
-            _currentPlayerIndex.Value = 0;
-            NotifyTurnChange();
+            _playerSelectedAvatars[clientId] = avatarIndex;
         }
 
-        private void NotifyTurnChange()
+        [Rpc(SendTo.Server)]
+        public void SubmitAvatarSelectionServerRpc(int avatarIndex, RpcParams rpcParams = default)
         {
-            if (_playerIds.Count == 0) return;
-            OnPlayerTurnChanged?.Invoke(_playerIds[_currentPlayerIndex.Value]);
+            ulong senderId = rpcParams.Receive.SenderClientId;
+            RegisterPlayerAvatar(senderId, avatarIndex);
+        }
+        #endregion
+
+        #region Game Flow Controls
+        [Rpc(SendTo.Server)]
+        public void StartGameServerRpc()
+        {
+            if (!IsServer || _isGameStarted.Value) return;
+            _isGameStarted.Value = true;
+            NetworkManager.Singleton.SceneManager.LoadScene("GameScene", UnityEngine.SceneManagement.LoadSceneMode.Single);
+            NetworkManager.Singleton.SceneManager.OnLoadEventCompleted += OnGameplaySceneLoaded;
+        }
+
+        private void OnGameplaySceneLoaded(string sceneName, UnityEngine.SceneManagement.LoadSceneMode loadSceneMode, List<ulong> clientsCompleted, List<ulong> clientsTimedOut)
+        {
+            NetworkManager.Singleton.SceneManager.OnLoadEventCompleted -= OnGameplaySceneLoaded;
+
+            if (centerSpawnPoint == null)
+            {
+                GameObject sp = GameObject.FindWithTag("SpawnPoint");
+                if (sp != null) centerSpawnPoint = sp.transform;
+            }
+
+            var connectedClients = NetworkManager.Singleton.ConnectedClientsIds.ToList();
+            _playerActors.Clear();
+
+            for (int i = 0; i < totalActors; i++)
+            {
+                ulong ownerId = (playerRequired == 2) ? connectedClients[i < 2 ? 0 : 1] : connectedClients[i];
+                Vector3 spawnPos = (centerSpawnPoint != null) ? centerSpawnPoint.position : Vector3.zero;
+
+                GameObject playerInstance = Instantiate(playerPrefab, spawnPos, Quaternion.identity);
+                NetworkObject netObj = playerInstance.GetComponent<NetworkObject>();
+                netObj.SpawnWithOwnership(ownerId);
+
+                if (playerInstance.TryGetComponent(out Systems.PlayerStatus status))
+                {
+                    status.TeamId.Value = (i < 2) ? 0 : 1;
+                    status.MemberIndex.Value = (i % 2);
+                    if (_playerSelectedAvatars.TryGetValue(ownerId, out int avatarIdx))
+                        status.AvatarIndex.Value = avatarIdx;
+
+                    _playerActors.Add(netObj);
+                }
+            }
+
+            _currentRound.Value = 1;
+            _currentCycle.Value = 1;
+            _currentActorIndex.Value = 0;
+
+            if (_playerActors.Count > 0)
+            {
+                ActiveActorNetworkId.Value = _playerActors[0].NetworkObjectId;
+            }
+
+            NotifyTurnChange();
         }
 
         [Rpc(SendTo.Server)]
         public void RequestEndTurnRpc()
         {
-            int nextIndex = _currentPlayerIndex.Value + 1;
+            if (!IsServer) return;
 
-            if (nextIndex >= _playerIds.Count) 
+            int nextIndex = _currentActorIndex.Value + 1;
+            _currentRound.Value++;
+            OnRoundChanged?.Invoke(_currentRound.Value);
+
+            if (nextIndex >= _playerActors.Count)
             {
                 nextIndex = 0;
-                _currentRound.Value++;
+                _currentCycle.Value++;
+                OnCycleChanged?.Invoke(_currentCycle.Value);
 
-                if (_currentRound.Value > 1 && (_currentRound.Value - 1) % 3 == 0)
+                if (_currentCycle.Value > 1 && (_currentCycle.Value - 1) % 3 == 0)
                 {
                     EconomyManager.Instance.ProcessRentCollectionServerRpc();
                 }
             }
-            _currentPlayerIndex.Value = nextIndex;
+
+            _currentActorIndex.Value = nextIndex;
+
+            if (_playerActors.Count > 0)
+            {
+                ActiveActorNetworkId.Value = _playerActors[nextIndex].NetworkObjectId;
+            }
         }
 
         [Rpc(SendTo.ClientsAndHost)]
         public void NotifyEndGameRpc(ulong playerId, bool isWin, string reason)
         {
-            _isGameStarted.Value = false;
-            OnGameOver?.Invoke(playerId, isWin, reason);
+            Debug.Log($"[Game Over] Player {playerId} {(isWin ? "ชนะ" : "แพ้")} - เหตุผล: {reason}");
         }
+        #endregion
+
+        #region Helper Methods
+        private void NotifyTurnChange()
+        {
+            OnPlayerTurnChanged?.Invoke(ActiveActorNetworkId.Value);
+        }
+        #endregion
     }
 }

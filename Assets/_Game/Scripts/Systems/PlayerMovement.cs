@@ -61,12 +61,7 @@ namespace Systems
 
             if (TurnManager.Instance == null || !TurnManager.Instance.IsGameStarted) return;
 
-            ulong activeId = TurnManager.Instance.CurrentActivePlayerId;
-
-            if (NetworkManager.Singleton.LocalClientId != activeId)
-            {
-                return; 
-            }
+            if (TurnManager.Instance.ActiveActorNetworkId.Value != this.NetworkObjectId) return;
 
             if (Mouse.current.leftButton.wasPressedThisFrame)
             {

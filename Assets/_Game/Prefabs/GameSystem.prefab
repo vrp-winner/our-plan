@@ -10,10 +10,10 @@ GameObject:
   m_Component:
   - component: {fileID: 7865400150441970625}
   - component: {fileID: 4122800351103190810}
-  - component: {fileID: 3941821379803793277}
   - component: {fileID: -3075915136331972885}
   - component: {fileID: -2941593709554513382}
   - component: {fileID: 1573185047811088978}
+  - component: {fileID: -709390317350004835}
   m_Layer: 0
   m_Name: GameSystem
   m_TagString: Untagged
@@ -61,20 +61,6 @@ MonoBehaviour:
   AutoObjectParentSync: 1
   SyncOwnerTransformWhenParented: 1
   AllowOwnerToParent: 0
---- !u!114 &3941821379803793277
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5358603181612879035}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bd710dd456d822f46927d84b487b7dac, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TurnManager
-  ShowTopMostFoldoutHeaderGroup: 1
-  turnsPerCycle: 4
 --- !u!114 &-3075915136331972885
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -90,7 +76,10 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   JointMoney:
     m_InternalValue: 1000
-  taxEate: 0.04
+  baseRent: 9000
+  penaltyRate: 3000
+  RentLevel:
+    m_InternalValue: 0
 --- !u!114 &-2941593709554513382
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -117,3 +106,23 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Managers.StatusManager
   ShowTopMostFoldoutHeaderGroup: 1
+--- !u!114 &-709390317350004835
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5358603181612879035}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bd710dd456d822f46927d84b487b7dac, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Managers.TurnManager
+  ShowTopMostFoldoutHeaderGroup: 1
+  playerRequired: 2
+  totalActors: 4
+  maxCycles: 15
+  playerPrefab: {fileID: 5480560724008698887, guid: eabfedfac9c52ec43af28d8c8d9e08aa, type: 3}
+  centerSpawnPoint: {fileID: 7261506984029591589, guid: 785ac106311b91f449b1bc476a69f09c, type: 3}
+  ActiveActorNetworkId:
+    m_InternalValue: 0

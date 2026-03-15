@@ -291,6 +291,7 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   visualModel: {fileID: 5480560724008698887}
   col: {fileID: 1191252213824709209}
+  modelVariants: []
 --- !u!114 &3630309084394093359
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -304,3 +305,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Systems.PlayerStatus
   ShowTopMostFoldoutHeaderGroup: 1
+  TeamId:
+    m_InternalValue: 0
+  MemberIndex:
+    m_InternalValue: 0
+  AvatarIndex:
+    m_InternalValue: 0
