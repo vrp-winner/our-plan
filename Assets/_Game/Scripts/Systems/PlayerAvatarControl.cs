@@ -65,6 +65,16 @@ namespace Systems
 
         public override void OnNetworkDespawn()
         {
+            if (UnityEngine.AI.NavMesh.SamplePosition(transform.position, out UnityEngine.AI.NavMeshHit hit, 5.0f, UnityEngine.AI.NavMesh.AllAreas))
+            {
+                _startPosition = hit.position;
+            }
+            else
+            {
+                _startPosition = transform.position;
+            }
+
+            _playerStatus = GetComponent<PlayerStatus>();
             if (TurnManager.Instance != null)
             {
                 TurnManager.Instance.OnPlayerTurnChanged -= CheckTurnVisibility;
@@ -74,7 +84,6 @@ namespace Systems
         
         private void OnGameStateChanged(bool isStarted)
         {
-            // ถ้าเกมเพิ่งเริ่ม ให้เช็คเลยว่าตาใคร
             if (isStarted)
             {
                 CheckTurnVisibility(TurnManager.Instance.CurrentActivePlayerId);
@@ -87,10 +96,7 @@ namespace Systems
 
         private void CheckTurnVisibility(ulong activeActorId)
         {
-            // เปลี่ยนจาก OwnerClientId เป็น this.NetworkObjectId
             bool amITheActiveActor = (this.NetworkObjectId == activeActorId);
-
-            // สั่งแสดงผลเฉพาะถ้าผลเป็น true
             UpdateVisuals(amITheActiveActor);
 
             if (IsServer && amITheActiveActor)
@@ -98,12 +104,9 @@ namespace Systems
                 var agent = GetComponent<UnityEngine.AI.NavMeshAgent>();
                 if (agent != null)
                 {
-                    agent.ResetPath();
-                    agent.Warp(_startPosition);
-                }
-                else
-                {
-                    transform.position = _startPosition;
+                    agent.ResetPath(); 
+                    agent.Warp(_startPosition); 
+                                               
                 }
             }
         }

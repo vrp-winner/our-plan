@@ -58,7 +58,6 @@ namespace Systems
 
         private void HandleTurnChange(ulong activeActorId)
         {
-            // เปลี่ยนจาก OwnerClientId เป็นเช็ค NetworkObjectId
             if (this.NetworkObjectId == activeActorId)
             {
                 _pointsRemaining.Value = gameConfig.MaxPointsPerTurn;
@@ -142,7 +141,6 @@ namespace Systems
                 UI.InteractionUIManager.Instance.HideUI();
             }
         }
-        // ฟังก์ชันอื่นๆ (NotifyLocationExit, CloseUI) คงเดิมไว้ได้เลย
         public void OnEnterHome()
         {
             if (IsServer)

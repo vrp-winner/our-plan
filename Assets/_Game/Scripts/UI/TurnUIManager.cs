@@ -47,12 +47,10 @@ namespace UI
             int minutes = totalSeconds / 60;
             int seconds = totalSeconds % 60;
 
-            // แสดงผลเป็นเวลา (02:00, 01:54...) ตามแต้มที่เหลือ
             timeText.text = $"Time: {minutes:00}:{seconds:00}";
             timeText.color = totalSeconds <= 20 ? Color.red : Color.white;
         }
 
-        // ฟังก์ชัน UpdateTurnUI และ UpdateCycleUI ใช้ของเดิมได้เลย
         private void UpdateTurnUI(int turn) => turnText.text = turn > 0 ? $"Round: {turn}" : "";
         private void UpdateCycleUI(int cycle) => cycleText.text = cycle > 0 ? $"Month: {cycle}" : "";
     }
