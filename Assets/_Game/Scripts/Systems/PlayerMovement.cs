@@ -3,6 +3,7 @@ using Unity.Netcode;
 using UnityEngine.AI; // สำหรับ NavMesh
 using UnityEngine.InputSystem; // สำหรับรับค่าเมาส์
 using Unity.Cinemachine;
+using UnityEngine.EventSystems;
 using Managers;
 
 namespace Systems
@@ -10,60 +11,52 @@ namespace Systems
     /// <summary>
     /// ควบคุมการเดินของตัวละครด้วย NavMeshAgent (Click Building -> Walk to EntryPoint)
     /// </summary>
-    [RequireComponent(typeof(NavMeshAgent))]
     public class PlayerMovement : NetworkBehaviour
     {
+        #region ตั้งค่าการเดิน (Settings)
+        [Header("Movement Settings")]
+        [SerializeField] private float moveSpeed = 5f; // ความเร็วในการเดิน
+        [SerializeField] private float rotationSpeed = 10f; // ความเร็วในการหมุนตัว
+
         [Header("Interaction Settings")]
         [SerializeField] private LayerMask interactableLayer; // Layer ของตึก
         [SerializeField] private LayerMask groundLayer; // Layer พื้น (เผื่ออยากให้เดินบนพื้นได้ที่วๆ)
+        #endregion
 
+        #region สถานะปัจจุบัน (State Variables)
+        private bool _isMoving = false;
+        private Vector3 _targetPosition;
+        private string _targetLocationName;
+        #endregion
 
-
-        private NavMeshAgent _agent;
         private Camera _mainCamera;
 
+        #region Lifecycle (เริ่มเกม & อัปเดต)
         private void Awake()
         {
-            _agent = GetComponent<NavMeshAgent>();
             _mainCamera = Camera.main;
-
-            // Tweak NavMeshAgent สำหรับแก้ปัญหาเดินสไลด์
-            // Acceleration สูงๆ จะทำให้เริ่มเดินและหยุดทันที ไม่ไถล
-            _agent.acceleration = 5f;
-            _agent.angularSpeed = 360f; // หันทันที ไม่ตีวงกว้าง
-            _agent.autoBraking = true;
         }
 
         public override void OnNetworkSpawn()
         {
-            if (IsOwner)
-            {
-                SetupCamera();
-            }
-            if (!IsServer)
-                if (_agent != null)
-                {
-                    _agent.enabled = false;
-                }
+            if (IsOwner) SetupCamera();
         }
 
         private void SetupCamera()
         {
-            if (!IsOwner) return;
-
             var vCam = FindFirstObjectByType<CinemachineCamera>();
-            if (vCam != null)
-            {
-                vCam.Follow = this.transform;
-            }
+            if (vCam != null) vCam.Follow = this.transform;
         }
 
         private void Update()
         {
+            if (IsServer && _isMoving)
+            {
+                MoveTowardsTarget();
+            }
+
             if (!IsOwner || !IsSpawned) return;
-
-            if (TurnManager.Instance == null || !TurnManager.Instance.IsGameStarted) return;
-
+            if (TurnManager.Instance == null) return;
             if (TurnManager.Instance.ActiveActorNetworkId.Value != this.NetworkObjectId) return;
 
             if (Mouse.current.leftButton.wasPressedThisFrame)
@@ -71,58 +64,71 @@ namespace Systems
                 HandleClickMovement();
             }
         }
+        #endregion
 
+        #region คำสั่งคลิก (Client)
         private void HandleClickMovement()
         {
-            if (_mainCamera == null) return;
+            if (_mainCamera == null || _isMoving) return;
+            if (EventSystem.current.IsPointerOverGameObject())
+            {
+                return; 
+            }
 
             Ray ray = _mainCamera.ScreenPointToRay(Mouse.current.position.ReadValue());
-            RaycastHit hit;
-
-            if (Physics.Raycast(ray, out hit, 100f, interactableLayer))
+            if (Physics.Raycast(ray, out RaycastHit hit, 100f, interactableLayer))
             {
                 if (hit.collider.TryGetComponent(out InteractableLocation location))
                 {
                     Vector3 target = location.GetWalkTarget();
-                    Debug.Log($"[Player] สั่งเดินไปที่: {location.GetLocationName()}");
-                    RequestMoveServerRpc(target);
-                    return;
+                    target.y = transform.position.y; 
+
+                    Debug.Log($"[Client] สั่งเดินไปที่: {location.GetLocationName()}");
+                    RequestMoveServerRpc(target, location.gameObject.name);
                 }
             }
 
 
         }
+        #endregion
 
+        #region ระบบบังคับตัวละคร (Server)
         [Rpc(SendTo.Server)]
-        private void RequestMoveServerRpc(Vector3 targetPosition)
+        private void RequestMoveServerRpc(Vector3 targetPosition, string locationName)
         {
-            // 1. เมคชัวร์ว่า Agent บน Server เปิดอยู่แน่นอน
-            if (!_agent.enabled) _agent.enabled = true;
+            _targetPosition = targetPosition;
+            _targetLocationName = locationName;
+            _isMoving = true;
 
-            // 2. ถ้าหลุดจาก NavMesh ให้ใช้สูตร "ปิด-ย้าย-เปิด"
-            if (!_agent.isOnNavMesh)
+            // สั่งปิด UI ก่อนเริ่มเดิน
+            if (TryGetComponent(out PlayerPointSystem pointSystem))
             {
-                // ขยายวงค้นหาพื้นเป็น 5 เมตร เผื่อเกิดลอยสูงไปหน่อย
-                if (UnityEngine.AI.NavMesh.SamplePosition(transform.position, out UnityEngine.AI.NavMeshHit hit, 5.0f, UnityEngine.AI.NavMesh.AllAreas))
-                {
-                    _agent.enabled = false;            // ปิด Agent ก่อนเพื่อตัดการเชื่อมต่อกับระบบชั่วคราว
-                    transform.position = hit.position; // จับย้ายพิกัดลงพื้น NavMesh เป๊ะๆ
-                    _agent.enabled = true;             // เปิด Agent ใหม่อีกครั้ง ระบบจะบังคับให้มันเกาะพื้น 100%
-
-                    Debug.Log("[Server] รีเซ็ต Agent ลงพื้นด้วยสูตร ปิด-เปิด สำเร็จ!");
-                }
-                else
-                {
-                    Debug.LogError("[Server] หาพื้น NavMesh ไม่เจอเลย! บริเวณที่ตัวละครอยู่ตรงนี้อาจจะยังไม่ได้ Bake พื้น");
-                    return;
-                }
-            }
-
-            // 3. เมื่อมั่นใจว่าเกาะพื้นแล้ว ก็สั่งเดินได้เลย
-            if (_agent.isOnNavMesh)
-            {
-                _agent.SetDestination(targetPosition);
+                pointSystem.NotifyLocationExit();
             }
         }
+        private void MoveTowardsTarget()
+        {
+            transform.position = Vector3.MoveTowards(transform.position, _targetPosition, moveSpeed * Time.deltaTime);
+
+            Vector3 direction = (_targetPosition - transform.position).normalized;
+            if (direction != Vector3.zero)
+            {
+                Quaternion targetRotation = Quaternion.LookRotation(direction);
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+            }
+
+            if (Vector3.Distance(transform.position, _targetPosition) < 0.05f)
+            {
+                transform.position = _targetPosition; 
+                _isMoving = false;
+
+                if (TryGetComponent(out PlayerPointSystem pointSystem))
+                {
+                    Debug.Log($"[Server] เดินถึง {_targetLocationName} แล้ว เด้ง UI!");
+                    pointSystem.NotifyLocationEnter(_targetLocationName);
+                }
+            }
+        }
+        #endregion
     }
 }

@@ -8,13 +8,16 @@ namespace UI
 {
     public class SimpleStatusUI : MonoBehaviour
     {
+        #region ตัวแปร (UI References)
         [Header("UI References")]
         public TextMeshProUGUI relText;
         public TextMeshProUGUI stressText;
         public TextMeshProUGUI moneyText;
 
         private PlayerStatus _currentStatus;
+        #endregion
 
+        #region Lifecycle
         private void Start()
         {
             if (TurnManager.Instance != null)
@@ -22,6 +25,10 @@ namespace UI
                 TurnManager.Instance.OnPlayerTurnChanged += UpdateTargetPlayer;
             }
         }
+
+        #endregion
+
+        #region อัปเดตข้อมูล (Update Logic)
         private void OnStatsChanged(int oldV, int newV) => RefreshUI();
         private void OnMoneyChanged(float oldV, float newV) => RefreshUI();
         private void UpdateTargetPlayer(ulong activeActorId)
@@ -33,7 +40,6 @@ namespace UI
                 _currentStatus.PersonalMoney.OnValueChanged -= OnMoneyChanged;
             }
 
-            // เลิกใช้ foreach แล้วใช้ TryGetValue ดึงตัวละครออกมาตรงๆ
             if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(activeActorId, out var netObj))
             {
                 _currentStatus = netObj.GetComponent<PlayerStatus>();
@@ -56,4 +62,5 @@ namespace UI
             moneyText.text = $"Personal Money: {_currentStatus.PersonalMoney.Value:N0}";
         }
     }
+    #endregion
 }

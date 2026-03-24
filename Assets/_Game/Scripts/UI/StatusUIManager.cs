@@ -8,18 +8,21 @@ namespace UI
 {
     public class StatusUIManager : MonoBehaviour
     {
+        #region ตั้งค่า (UI References)
         [Header("UI Rings")]
         [SerializeField] private Image relationshipRing;
         [SerializeField] private Image stressRing;
 
         private PlayerStatus _activeStatus;
+        #endregion
 
+        #region  Lifecycle
         private void Start()
         {
             if (TurnManager.Instance != null)
                 TurnManager.Instance.OnPlayerTurnChanged += UpdateActivePlayerUI;
         }
-
+        #endregion
         private void UpdateActivePlayerUI(ulong activeActorId)
         {
             if (_activeStatus != null)

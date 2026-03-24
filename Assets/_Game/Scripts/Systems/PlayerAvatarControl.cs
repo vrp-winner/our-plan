@@ -9,6 +9,7 @@ namespace Systems
     /// </summary>
     public class PlayerAvatarControl : NetworkBehaviour
     {
+        #region ตัวแปร (References)
         [Header("References")]
         [SerializeField] private GameObject visualModel; // โมเดลตัวละคร (Mesh)
         [SerializeField] private Collider col; // Collider ของตัวละคร
@@ -20,17 +21,19 @@ namespace Systems
         [Header("Character Models (4 Types)")]
         [Tooltip("ใส่โมเดล 4 แบบ เรียงตามลำดับ: ทีม1คน1, ทีม1คน2, ทีม2คน1, ทีม2คน2")]
         [SerializeField] private GameObject[] modelVariants;
+        #endregion
 
-
+        #region Lifecycle
         public override void OnNetworkSpawn()
         {
             _startPosition = transform.position; // จำจุดเกิดไว้
 
+            _playerStatus = GetComponent<PlayerStatus>();
             if (_playerStatus != null)
             {
                 _playerStatus.TeamId.OnValueChanged += (oldV, newV) => SetupModelVariant();
                 _playerStatus.MemberIndex.OnValueChanged += (oldV, newV) => SetupModelVariant();
-                SetupModelVariant(); // เรียกใช้เผื่อตั้งค่าเสร็จก่อน OnNetworkSpawn
+                SetupModelVariant();
             }
 
             if (TurnManager.Instance != null)
@@ -39,59 +42,41 @@ namespace Systems
                 TurnManager.Instance.OnGameStateChanged += OnGameStateChanged;
 
                 if (TurnManager.Instance.IsGameStarted)
-                {
                     CheckTurnVisibility(TurnManager.Instance.CurrentActivePlayerId);
-                }
                 else
-                {
                     UpdateVisuals(false);
-                }
             }
-        }
-        private void SetupModelVariant()
-        {
-            if (modelVariants == null || modelVariants.Length == 0) return;
-
-            int targetIndex = _playerStatus.AvatarIndex.Value;
-
-            for (int i = 0; i < modelVariants.Length; i++)
-            {
-                if (modelVariants[i] != null)
-                {
-                    modelVariants[i].SetActive(i == targetIndex);
-                }
-            }
-        }
-
+        }        
         public override void OnNetworkDespawn()
         {
-            if (UnityEngine.AI.NavMesh.SamplePosition(transform.position, out UnityEngine.AI.NavMeshHit hit, 5.0f, UnityEngine.AI.NavMesh.AllAreas))
-            {
-                _startPosition = hit.position;
-            }
-            else
-            {
-                _startPosition = transform.position;
-            }
-
-            _playerStatus = GetComponent<PlayerStatus>();
             if (TurnManager.Instance != null)
             {
                 TurnManager.Instance.OnPlayerTurnChanged -= CheckTurnVisibility;
                 TurnManager.Instance.OnGameStateChanged -= OnGameStateChanged;
             }
         }
-        
+        #endregion
+
+        #region ภาพ (Visual Logic)
+        private void SetupModelVariant()
+        {
+            if (modelVariants == null || modelVariants.Length == 0 || _playerStatus == null) return;
+
+            int targetIndex = _playerStatus.AvatarIndex.Value;
+
+            if (targetIndex < 0 || targetIndex >= modelVariants.Length) targetIndex = 0;
+            for (int i = 0; i < modelVariants.Length; i++)
+            {
+                if (modelVariants[i] != null) modelVariants[i].SetActive(i == targetIndex);
+            }
+        }
+
+
+       
         private void OnGameStateChanged(bool isStarted)
         {
-            if (isStarted)
-            {
-                CheckTurnVisibility(TurnManager.Instance.CurrentActivePlayerId);
-            }
-            else
-            {
-                UpdateVisuals(false);
-            }
+            if (isStarted) CheckTurnVisibility(TurnManager.Instance.CurrentActivePlayerId);
+            else UpdateVisuals(false);
         }
 
         private void CheckTurnVisibility(ulong activeActorId)
@@ -101,13 +86,7 @@ namespace Systems
 
             if (IsServer && amITheActiveActor)
             {
-                var agent = GetComponent<UnityEngine.AI.NavMeshAgent>();
-                if (agent != null)
-                {
-                    agent.ResetPath(); 
-                    agent.Warp(_startPosition); 
-                                               
-                }
+                transform.position = _startPosition;
             }
         }
 
@@ -118,4 +97,5 @@ namespace Systems
             if (col != null) col.enabled = isActive;
         }
     }
+    #endregion
 }

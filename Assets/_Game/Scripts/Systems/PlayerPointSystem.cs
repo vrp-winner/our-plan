@@ -9,6 +9,7 @@ namespace Systems
 {
     public class PlayerPointSystem : NetworkBehaviour
     {
+        #region ตัวแปรตั้งค่า (Variables)
         [SerializeField] private GameConfig gameConfig;
 
         // เปลี่ยนมาใช้ int ทั้งหมดเพื่อความแม่นยำของ Point
@@ -16,7 +17,9 @@ namespace Systems
         private bool _isSick = false; // สำหรับสถานะป่วย
 
         public event Action<int> OnVirtualTimeChanged;
+        #endregion
 
+        #region การแจกเวลา(Timecycle )
         public override void OnNetworkSpawn()
         {
             // ทุกครั้งที่แต้มเปลี่ยน ส่งค่า (แต้ม * วินาทีต่อแต้ม) ไปให้ UI แสดงผล
@@ -26,8 +29,21 @@ namespace Systems
 
             if (IsServer)
             {
-                TurnManager.Instance.OnPlayerTurnChanged += HandleTurnChange;
+                TurnManager.Instance.ActiveActorNetworkId.OnValueChanged += (oldId, newId) => {
+                    if (this.NetworkObjectId == newId)
+                    {
+                        _pointsRemaining.Value = gameConfig.MaxPointsPerTurn;
+                        Debug.Log($"[Server] แจกแต้มให้ Client {OwnerClientId} สำเร็จ!");
+                    }
+                };
+
+                if (TurnManager.Instance.ActiveActorNetworkId.Value == this.NetworkObjectId)
+                {
+                    _pointsRemaining.Value = gameConfig.MaxPointsPerTurn;
+                }
             }
+
+            RefreshTimeUI();
         }
 
         public override void OnNetworkDespawn()
@@ -37,8 +53,9 @@ namespace Systems
                 TurnManager.Instance.OnPlayerTurnChanged -= HandleTurnChange;
             }
         }
+        #endregion
 
-
+        #region ระบบใช้แต้มและสลับเทิร์น (Point Usage)
         [Rpc(SendTo.Server)]
         public void UsePointsServerRpc(int pointAmount)
         {
@@ -65,7 +82,6 @@ namespace Systems
             }
         }
 
-        // --- ระบบ Interaction (ใช้ร่วมกับ UI) ---
 
         public void RequestAction(int pointCost)
         {
@@ -85,9 +101,10 @@ namespace Systems
                 Debug.Log("ผู้เล่นกด Sleep -> ใช้แต้มที่เหลือทั้งหมด");
             }
         }
+        #endregion
 
         // --- ระบบ Location (เหมือนเดิมแต่ปรับ Parameter) ---
-
+        #region เชื่อมต่อกับตึก (Location Sync)
         public void NotifyLocationEnter(string locationObjectName)
         {
             EnterLocationClientRpc(locationObjectName);
@@ -119,6 +136,9 @@ namespace Systems
                 InteractionUIManager.Instance.ShowLocation(loc.Config, this);
             }
         }
+        #endregion
+
+        #region Utilities (อื่นๆ)
         public void RequestCloseInteractionUI()
         {
             if (IsOwner)
@@ -148,5 +168,10 @@ namespace Systems
                 StatusManager.Instance.ProcessHomeEntry(this.GetComponent<PlayerStatus>());
             }
         }
+        public void RefreshTimeUI()
+        {
+            OnVirtualTimeChanged?.Invoke(_pointsRemaining.Value * gameConfig.SecondsPerPoint);
+        }
+        #endregion
     }
 }

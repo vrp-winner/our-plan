@@ -11,12 +11,16 @@ namespace UI
     {
         public static MainMenuUIManager Instance { get; private set; }
 
+        #region หน้าต่าง UI (Panels)
         [Header("Panels (หน้าต่างต่างๆ)")]
         [SerializeField] private GameObject mainMenuPanel;
         [SerializeField] private GameObject hostSetupPanel;
         [SerializeField] private GameObject timeSetupPanel;
         [SerializeField] private GameObject characterSetupPanel; 
         [SerializeField] private GameObject waitingLobbyPanel;
+        #endregion
+
+        #region ปุ่ม (Buttons)
 
         [Header("Main Menu Buttons")]
         [SerializeField] private Button playBtn;
@@ -45,12 +49,17 @@ namespace UI
         [SerializeField] private TextMeshProUGUI statusText;
         [SerializeField] private Button startGameBtn;
 
+        #endregion
+
+        #region ตัวแปรเก็บสถานะ (State Variables)
         private int _tempPlayerCount = 2;
         private int _tempMaxCycles = 15;
         private bool _isHostMode = false;
         private int _selectedAvatarIndex = 0; 
         private int _lastPlayerCount = -1;
+        #endregion
 
+        #region Lifecycle
         private void Awake()
         {
             if (Instance == null) Instance = this;
@@ -113,7 +122,9 @@ namespace UI
             if (TurnManager.Instance != null)
                 TurnManager.Instance.OnGameStateChanged -= HandleGameStateChanged;
         }
+        #endregion
 
+        #region Flow Logic (การเปลี่ยนหน้าต่าง)
         private void SwitchPanel(GameObject panelToShow)
         {
             mainMenuPanel.SetActive(false);
@@ -124,8 +135,6 @@ namespace UI
 
             panelToShow.SetActive(true);
         }
-
-        #region Flow Logic
         private void GoToTimeSetup(int playerCount)
         {
             _tempPlayerCount = playerCount;
@@ -149,7 +158,9 @@ namespace UI
                 selectedAvatarText.text = $"เลือกตัวละครแบบที่: {index + 1}";
             }
         }
+        #endregion
 
+        #region Network Events (การจัดการผู้เล่น)
         private void ConfirmCharacterAndConnect()
         {
             
@@ -218,5 +229,6 @@ namespace UI
             }
         }
         #endregion
+
     }
 }

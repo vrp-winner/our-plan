@@ -9,6 +9,7 @@ namespace UI
 {
     public class InteractionUIManager : MonoBehaviour
     {
+        #region UI (UI References)
         public static InteractionUIManager Instance { get; private set; }
 
         [Header("UI References")]
@@ -28,7 +29,9 @@ namespace UI
             else Destroy(gameObject);
             HideUI();
         }
+        #endregion
 
+        #region แสดงหน้าต่าง (Show / Hide)
         public void ShowLocation(LocationConfig config, PlayerPointSystem player)
         {
             _currentUser = player;
@@ -53,12 +56,20 @@ namespace UI
             panelRoot.SetActive(true);
         }
 
+        public void HideUI()
+        {
+            panelRoot.SetActive(false);
+            _currentUser = null;
+        }
+        #endregion
+
+        #region จัดการปุ่ม (Action Execution)
         private void CreateActionButton(LocationAction action, bool isInteractive)
         {
             Button btn = Instantiate(actionButtonPrefab, actionButtonsContainer);
             var btnText = btn.GetComponentInChildren<TextMeshProUGUI>();
 
-           
+
             if (btnText != null) btnText.text = $"{action.ActionName} (-{action.PointCost * 6}s)";
 
             btn.interactable = isInteractive;
@@ -67,6 +78,7 @@ namespace UI
             {
                 btn.onClick.AddListener(() => OnActionClicked(action));
             }
+
         }
 
         private void OnActionClicked(LocationAction action)
@@ -95,10 +107,12 @@ namespace UI
             }
         }
 
-        public void HideUI()
-        {
-            panelRoot.SetActive(false);
-            _currentUser = null;
-        }
+        #endregion
+
+
+
+
+
+
     }
 }
