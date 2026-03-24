@@ -97,3 +97,19 @@ InitTestScene*.unity*
 
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
+ProjectSettings/ShaderGraphSettings.asset
+ProjectSettings/EditorBuildSettings.asset
+Packages/packages-lock.json
+Packages/manifest.json
+Assets/TutorialInfo/Scripts/Readme.cs.meta
+Assets/TutorialInfo/Scripts/Readme.cs
+Assets/TutorialInfo/Scripts/Editor/ReadmeEditor.cs.meta
+Assets/TutorialInfo/Scripts/Editor/ReadmeEditor.cs
+Assets/TutorialInfo/Scripts/Editor.meta
+Assets/TutorialInfo/Scripts.meta
+Assets/TutorialInfo/Layout.wlt.meta
+Assets/TutorialInfo/Layout.wlt
+Assets/TutorialInfo/Icons/URP.png.meta
+Assets/TutorialInfo/Icons/URP.png
+Assets/TutorialInfo/Icons.meta
+Assets/TutorialInfo.meta
