@@ -1,35 +1,35 @@
 using UnityEngine;
 using Unity.Netcode;
-using UnityEngine.AI; // สำหรับ NavMesh
+using Unity.Netcode.Components;
 using UnityEngine.InputSystem; // สำหรับรับค่าเมาส์
 using Unity.Cinemachine;
 using UnityEngine.EventSystems;
 using Managers;
+using Domain;
 
 namespace Systems
 {
     /// <summary>
-    /// ควบคุมการเดินของตัวละครด้วย NavMeshAgent (Click Building -> Walk to EntryPoint)
+    /// ควบคุมการเดินของตัวละครบน Server และรับ Input จาก Client
     /// </summary>
+    [RequireComponent(typeof(NetworkTransform))]
     public class PlayerMovement : NetworkBehaviour
     {
-        #region ตั้งค่าการเดิน (Settings)
+        #region Settings (ตั้งค่าการเดิน)
         [Header("Movement Settings")]
         [SerializeField] private float moveSpeed = 5f; // ความเร็วในการเดิน
         [SerializeField] private float rotationSpeed = 10f; // ความเร็วในการหมุนตัว
 
         [Header("Interaction Settings")]
         [SerializeField] private LayerMask interactableLayer; // Layer ของตึก
-        [SerializeField] private LayerMask groundLayer; // Layer พื้น (เผื่ออยากให้เดินบนพื้นได้ที่วๆ)
         #endregion
 
-        #region สถานะปัจจุบัน (State Variables)
+        #region State Variables (สถานะปัจจุบัน)
         private bool _isMoving = false;
         private Vector3 _targetPosition;
-        private string _targetLocationName;
-        #endregion
-
+        private string _targetLocationId;
         private Camera _mainCamera;
+        #endregion
 
         #region Lifecycle (เริ่มเกม & อัปเดต)
         private void Awake()
@@ -42,38 +42,37 @@ namespace Systems
             if (IsOwner) SetupCamera();
         }
 
+        private void Update()
+        {
+            // STEP 1: Server Logic
+            if (IsServer && _isMoving) ProcessMovement();
+
+            // STEP 2: Input Guard
+            if (!IsSpawned || !IsOwner) return;
+            if (TurnManager.Instance == null) return;
+            if (TurnManager.Instance.ActiveActorNetworkId.Value != this.NetworkObjectId) return;
+
+            // STEP 3: Client Input
+            if (Mouse.current.leftButton.wasPressedThisFrame) HandleClickMovement();
+        }
+        #endregion
+        
+        #region Setup
         private void SetupCamera()
         {
             var vCam = FindFirstObjectByType<CinemachineCamera>();
             if (vCam != null) vCam.Follow = this.transform;
         }
-
-        private void Update()
-        {
-            if (IsServer && _isMoving)
-            {
-                MoveTowardsTarget();
-            }
-
-            if (!IsOwner || !IsSpawned) return;
-            if (TurnManager.Instance == null) return;
-            if (TurnManager.Instance.ActiveActorNetworkId.Value != this.NetworkObjectId) return;
-
-            if (Mouse.current.leftButton.wasPressedThisFrame)
-            {
-                HandleClickMovement();
-            }
-        }
         #endregion
 
-        #region คำสั่งคลิก (Client)
+        #region Client Input Logic (คำสั่งคลิก)
+        /// <summary>
+        /// ยิง Raycast เพื่อหาเป้าหมายและส่งคำสั่งเดิน
+        /// </summary>
         private void HandleClickMovement()
         {
             if (_mainCamera == null || _isMoving) return;
-            if (EventSystem.current.IsPointerOverGameObject())
-            {
-                return; 
-            }
+            if (EventSystem.current.IsPointerOverGameObject()) return;
 
             Ray ray = _mainCamera.ScreenPointToRay(Mouse.current.position.ReadValue());
             if (Physics.Raycast(ray, out RaycastHit hit, 100f, interactableLayer))
@@ -81,32 +80,53 @@ namespace Systems
                 if (hit.collider.TryGetComponent(out InteractableLocation location))
                 {
                     Vector3 target = location.GetWalkTarget();
-                    target.y = transform.position.y; 
+                    
+                    // STEP 1: ตรวจสอบว่า Location Config ถูกต้องก่อนส่ง
+                    if (location.Config == null || string.IsNullOrEmpty(location.Config.LocationId)) return;
 
+                    // STEP 2: ส่ง Request ไปยัง Server ด้วย LocationId
                     Debug.Log($"[Client] สั่งเดินไปที่: {location.GetLocationName()}");
-                    RequestMoveServerRpc(target, location.gameObject.name);
+                    RequestMoveServerRpc(target, location.Config.LocationId);
                 }
             }
-
-
         }
         #endregion
 
-        #region ระบบบังคับตัวละคร (Server)
+        #region Server Movement Logic (ระบบบังคับตัวละคร)
+        /// <summary>
+        /// RPC Entry Point: รับคำสั่งเริ่มเดินจาก Owner Client
+        /// </summary>
+        /// <param name="targetPosition">พิกัดเป้าหมายดิบ</param>
+        /// <param name="locationId">รหัสสถานที่จาก Config</param>
         [Rpc(SendTo.Server)]
-        private void RequestMoveServerRpc(Vector3 targetPosition, string locationName)
+        private void RequestMoveServerRpc(Vector3 targetPosition, string locationId)
         {
-            _targetPosition = targetPosition;
-            _targetLocationName = locationName;
-            _isMoving = true;
+            // STEP 1: Guard Check
+            if (!IsServer) return;
+            if (TurnManager.Instance.ActiveActorNetworkId.Value != this.NetworkObjectId) return;
+            
+            // STEP 2: Domain Layer Validate
+            bool isValid = GameActionProcessor.ValidateMovementSetup(
+                transform.position, 
+                targetPosition, 
+                out Vector3 validatedTarget
+            );
 
-            // สั่งปิด UI ก่อนเริ่มเดิน
-            if (TryGetComponent(out PlayerPointSystem pointSystem))
+            // STEP 3: เริ่มเดิน
+            if (isValid)
             {
-                pointSystem.NotifyLocationExit();
+                _targetPosition = validatedTarget;
+                _targetLocationId = locationId;
+                _isMoving = true;
+
+                if (TryGetComponent(out PlayerPointSystem pointSystem))
+                {
+                    pointSystem.NotifyLocationExit();
+                }
             }
         }
-        private void MoveTowardsTarget()
+        
+        private void ProcessMovement()
         {
             transform.position = Vector3.MoveTowards(transform.position, _targetPosition, moveSpeed * Time.deltaTime);
 
@@ -124,8 +144,8 @@ namespace Systems
 
                 if (TryGetComponent(out PlayerPointSystem pointSystem))
                 {
-                    Debug.Log($"[Server] เดินถึง {_targetLocationName} แล้ว เด้ง UI!");
-                    pointSystem.NotifyLocationEnter(_targetLocationName);
+                    Debug.Log($"[Server] เดินถึง {_targetLocationId} แล้ว เด้ง UI!");
+                    pointSystem.NotifyLocationEnter(_targetLocationId);
                 }
             }
         }

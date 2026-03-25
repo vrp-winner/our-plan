@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a56ed523c3bf1634c97a00a58a9ab376, type: 3}
   m_Name: BeachConfig
   m_EditorClassIdentifier: Assembly-CSharp::Configs.LocationConfig
+  <LocationId>k__BackingField: LOC_Beach
   <LocationName>k__BackingField: Beach
   <Description>k__BackingField: 
   <AvailableActions>k__BackingField:

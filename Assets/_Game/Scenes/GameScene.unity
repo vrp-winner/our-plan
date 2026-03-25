@@ -2628,8 +2628,8 @@ MonoBehaviour:
   locationNameText: {fileID: 936068648}
   descriptionText: {fileID: 1327979482}
   actionButtonsContainer: {fileID: 821046094}
-  closeButton: {fileID: 1279025227}
   actionButtonPrefab: {fileID: 3660691485348001754, guid: 21fdf64cbfdf3564393a66a99982865f, type: 3}
+  closeButton: {fileID: 1279025227}
 --- !u!114 &1112113735
 MonoBehaviour:
   m_ObjectHideFlags: 0

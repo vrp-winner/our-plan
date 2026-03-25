@@ -4,12 +4,18 @@ using Managers;
 using System;
 using Configs;
 using UI;
+using Domain;
 
 namespace Systems
 {
+    /// <summary>
+    /// ระบบจัดการแต้ม (Time/Action Points) ของตัวละคร
+    /// ลดความซับซ้อนของ RPC กลับไปใช้ SendTo.Owner และให้การปิด UI ทำงานแบบ Local
+    /// </summary>
     public class PlayerPointSystem : NetworkBehaviour
     {
-        #region ตัวแปรตั้งค่า (Variables)
+        #region Variables (ตัวแปรตั้งค่า)
+        [Header("Configuration")]
         [SerializeField] private GameConfig gameConfig;
 
         // เปลี่ยนมาใช้ int ทั้งหมดเพื่อความแม่นยำของ Point
@@ -19,7 +25,7 @@ namespace Systems
         public event Action<int> OnVirtualTimeChanged;
         #endregion
 
-        #region การแจกเวลา(Timecycle )
+        #region Lifecycle (การแจกเวลา)
         public override void OnNetworkSpawn()
         {
             // ทุกครั้งที่แต้มเปลี่ยน ส่งค่า (แต้ม * วินาทีต่อแต้ม) ไปให้ UI แสดงผล
@@ -29,14 +35,7 @@ namespace Systems
 
             if (IsServer)
             {
-                TurnManager.Instance.ActiveActorNetworkId.OnValueChanged += (oldId, newId) => {
-                    if (this.NetworkObjectId == newId)
-                    {
-                        _pointsRemaining.Value = gameConfig.MaxPointsPerTurn;
-                        Debug.Log($"[Server] แจกแต้มให้ Client {OwnerClientId} สำเร็จ!");
-                    }
-                };
-
+                TurnManager.Instance.ActiveActorNetworkId.OnValueChanged += HandleActiveActorChanged;
                 if (TurnManager.Instance.ActiveActorNetworkId.Value == this.NetworkObjectId)
                 {
                     _pointsRemaining.Value = gameConfig.MaxPointsPerTurn;
@@ -50,65 +49,82 @@ namespace Systems
         {
             if (IsServer && TurnManager.Instance != null)
             {
-                TurnManager.Instance.OnPlayerTurnChanged -= HandleTurnChange;
+                TurnManager.Instance.ActiveActorNetworkId.OnValueChanged -= HandleActiveActorChanged;
             }
         }
         #endregion
 
-        #region ระบบใช้แต้มและสลับเทิร์น (Point Usage)
+        #region Server Logic (ระบบใช้แต้มและสลับเทิร์น)
+        private void HandleActiveActorChanged(ulong oldId, ulong newId)
+        {
+            if (this.NetworkObjectId == newId)
+            {
+                _pointsRemaining.Value = gameConfig.MaxPointsPerTurn;
+            }
+        }
+        
         [Rpc(SendTo.Server)]
         public void UsePointsServerRpc(int pointAmount)
         {
-            if (_pointsRemaining.Value < pointAmount) return;
+            if (!IsServer) return;
+            if (TurnManager.Instance.ActiveActorNetworkId.Value != this.NetworkObjectId) return;
+            
+            bool canUsePoints = GameActionProcessor.TryProcessPointUsage(
+                _pointsRemaining.Value, 
+                pointAmount, 
+                _isSick, 
+                gameConfig.CostSickPenalty, 
+                out int newPointsRemaining
+            );
 
-            int finalCost = pointAmount;
-
-            if (_isSick) finalCost += gameConfig.CostSickPenalty;
-
-            _pointsRemaining.Value = Mathf.Max(0, _pointsRemaining.Value - finalCost);
-
-            if (_pointsRemaining.Value <= 0)
+            if (canUsePoints)
             {
-                TurnManager.Instance.RequestEndTurnRpc();
+                _pointsRemaining.Value = newPointsRemaining;
+                if (_pointsRemaining.Value <= 0)
+                {
+                    TurnManager.Instance.RequestEndTurnRpc();
+                }
             }
         }
+        #endregion
 
-        private void HandleTurnChange(ulong activeActorId)
-        {
-            if (this.NetworkObjectId == activeActorId)
-            {
-                _pointsRemaining.Value = gameConfig.MaxPointsPerTurn;
-                Debug.Log($"[PlayerPointSystem] เริ่มเทิร์นตัวละคร {this.NetworkObjectId} รีเซ็ตเป็น {gameConfig.MaxPointsPerTurn} แต้ม");
-            }
-        }
-
-
+        #region Client Input
         public void RequestAction(int pointCost)
         {
-            if (IsOwner)
-            {
-                // ส่งคำสั่งหักแต้มไปที่ Server
-                UsePointsServerRpc(pointCost);
-            }
+            if (!IsOwner) return;
+            if (TurnManager.Instance.ActiveActorNetworkId.Value != this.NetworkObjectId) return;
+
+            UsePointsServerRpc(pointCost);
         }
 
         public void SleepAndEndTurn()
         {
-            if (IsOwner)
-            {
-                // กดนอน = ใช้แต้มที่เหลือทั้งหมดจนเป็น 0
-                UsePointsServerRpc(_pointsRemaining.Value);
-                Debug.Log("ผู้เล่นกด Sleep -> ใช้แต้มที่เหลือทั้งหมด");
-            }
+            if (!IsOwner) return;
+            if (TurnManager.Instance.ActiveActorNetworkId.Value != this.NetworkObjectId) return;
+
+            // กดนอน = ใช้แต้มที่เหลือทั้งหมดจนเป็น 0
+            UsePointsServerRpc(_pointsRemaining.Value);
+            Debug.Log("ผู้เล่นกด Sleep -> ใช้แต้มที่เหลือทั้งหมด");
         }
         #endregion
 
-        // --- ระบบ Location (เหมือนเดิมแต่ปรับ Parameter) ---
-        #region เชื่อมต่อกับตึก (Location Sync)
-        public void NotifyLocationEnter(string locationObjectName)
+        #region Location Interactions (Simplified UI Flow)
+        /// <summary>
+        /// แจ้ง Owner Client เพื่อเปิดหน้าต่าง UI
+        /// </summary>
+        /// <param name="locationId">รหัสอ้างอิงของสถานที่</param>
+        public void NotifyLocationEnter(string locationId)
         {
-            EnterLocationClientRpc(locationObjectName);
+            if (IsServer)
+            {
+                // STEP 1: ใช้ Rpc แบบอ่านง่าย ส่งตรงเข้า Owner
+                EnterLocationClientRpc(locationId);
+            }
         }
+        
+        /// <summary>
+        /// แจ้ง Owner Client เพื่อปิดหน้าต่าง UI (กรณีเดินออกด้วยคำสั่งอื่น)
+        /// </summary>
         public void NotifyLocationExit()
         {
             if (IsServer)
@@ -117,57 +133,56 @@ namespace Systems
             }
         }
 
-        [Rpc(SendTo.ClientsAndHost)]
-        private void ExitLocationClientRpc()
+        /// <summary>
+        /// RPC: สั่งเปิด UI ไปที่ Owner
+        /// </summary>
+        [Rpc(SendTo.Owner)]
+        private void EnterLocationClientRpc(string locationId)
         {
-            if (UI.InteractionUIManager.Instance != null)
+            InteractableLocation loc = LocationRegistry.GetLocation(locationId);
+            if (loc != null)
             {
-                UI.InteractionUIManager.Instance.HideUI();
+                InteractionUIManager.Instance.ShowLocation(loc.Config, this);
             }
         }
 
-        [Rpc(SendTo.ClientsAndHost)]
-        private void EnterLocationClientRpc(string locationObjectName)
+        /// <summary>
+        /// RPC: สั่งปิด UI ไปที่ Owner
+        /// </summary>
+        [Rpc(SendTo.Owner)]
+        private void ExitLocationClientRpc()
         {
-            GameObject locationObj = GameObject.Find(locationObjectName);
-            if (locationObj != null && locationObj.TryGetComponent(out InteractableLocation loc))
+            if (InteractionUIManager.Instance != null)
             {
-                // ส่งสคริปต์ตัวเองเข้า UI เพื่อให้ UI เรียก RequestAction ได้
-                InteractionUIManager.Instance.ShowLocation(loc.Config, this);
+                InteractionUIManager.Instance.HideUI();
+            }
+        }
+        
+        /// <summary>
+        /// ร้องขอปิดหน้าต่าง UI (ทำงานแบบ Local ล้วน ไม่เปลือง Network)
+        /// </summary>
+        public void RequestCloseInteractionUI()
+        {
+            // STEP 1: Guard Check
+            if (!IsOwner) return;
+            
+            // STEP 2: ปิดฝั่ง Client ไปเลย ไม่ต้องเรียก RPC ไปหา Server อีกแล้ว
+            if (InteractionUIManager.Instance != null)
+            {
+                InteractionUIManager.Instance.HideUI();
             }
         }
         #endregion
 
         #region Utilities (อื่นๆ)
-        public void RequestCloseInteractionUI()
-        {
-            if (IsOwner)
-            {
-                CloseInteractionUIServerRpc();
-            }
-        }
-
-        [Rpc(SendTo.Server)]
-        private void CloseInteractionUIServerRpc()
-        {
-            CloseInteractionUIClientRpc();
-        }
-
-        [Rpc(SendTo.ClientsAndHost)]
-        private void CloseInteractionUIClientRpc()
-        {
-            if (UI.InteractionUIManager.Instance != null)
-            {
-                UI.InteractionUIManager.Instance.HideUI();
-            }
-        }
         public void OnEnterHome()
         {
-            if (IsServer)
+            if (IsServer && TryGetComponent(out PlayerStatus status))
             {
-                StatusManager.Instance.ProcessHomeEntry(this.GetComponent<PlayerStatus>());
+                StatusManager.Instance.ProcessHomeEntry(status);
             }
         }
+        
         public void RefreshTimeUI()
         {
             OnVirtualTimeChanged?.Invoke(_pointsRemaining.Value * gameConfig.SecondsPerPoint);
