@@ -47,7 +47,7 @@ namespace UI
             _currentUser = player;
 
             // เช็คว่าผู้เล่นที่มาแตะตึก คือคนที่มีเทิร์นปัจจุบันหรือไม่
-            bool isMyTurn = (player.NetworkObjectId == TurnManager.Instance.ActiveActorNetworkId.Value);
+            bool isMyTurn = (player.NetworkObjectId == TurnManager.Instance.activeActorNetworkId.Value);
             bool isOwner = player.IsOwner; // เป็นตัวละครของเราเองไหม
 
             locationNameText.text = config.LocationName;

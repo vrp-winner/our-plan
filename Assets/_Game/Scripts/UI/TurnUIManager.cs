@@ -7,7 +7,8 @@ using Unity.Netcode;
 namespace UI
 {
     /// <summary>
-    /// ผู้จัดการ UI ในการแสดงสถานะ รอบ/เดือน และเวลาของ Active Actor (Presentation Layer)
+    /// ตัวจัดการ UI ในการแสดงสถานะ Turn/Month และเวลาของ Active Actor (Presentation Layer)
+    /// อัปเดตการ Sync UI ตรงๆ จาก NetworkVariable เพื่อให้ทุก Client เห็นตรงกัน 100%
     /// </summary>
     public class TurnUIManager : MonoBehaviour
     {
@@ -32,16 +33,17 @@ namespace UI
                 // STEP 2: ผูก Event ต่างๆ
                 TurnManager.Instance.OnRoundChanged += UpdateTurnUI;
                 TurnManager.Instance.OnCycleChanged += UpdateCycleUI;
-                TurnManager.Instance.ActiveActorNetworkId.OnValueChanged += HandleActiveActorChanged;
+                TurnManager.Instance.activeActorNetworkId.OnValueChanged += HandleActiveActorChanged;
                 
-                // STEP 3: โหลดข้อมูลครั้งแรก
-                OnPlayerTurnChanged(TurnManager.Instance.ActiveActorNetworkId.Value);
+                // STEP 3: [CRITICAL FIX] บังคับโหลดค่าจาก NetworkVariable ทันทีเมื่อเกิด เพื่อป้องกัน UI ว่าง
+                UpdateTurnUI(TurnManager.Instance.currentRound.Value);
+                UpdateCycleUI(TurnManager.Instance.currentCycle.Value);
+                OnPlayerTurnChanged(TurnManager.Instance.activeActorNetworkId.Value);
             }
-
         }
         
         /// <summary>
-        /// เคลียร์ Event เมื่อถูกลบ
+        /// เคลียร์ Event เมื่อถูกทำลาย
         /// </summary>
         private void OnDestroy()
         {
@@ -49,7 +51,7 @@ namespace UI
             {
                 TurnManager.Instance.OnRoundChanged -= UpdateTurnUI;
                 TurnManager.Instance.OnCycleChanged -= UpdateCycleUI;
-                TurnManager.Instance.ActiveActorNetworkId.OnValueChanged -= HandleActiveActorChanged;
+                TurnManager.Instance.activeActorNetworkId.OnValueChanged -= HandleActiveActorChanged;
             }
             if (_activePlayerPointSystem != null)
             {
@@ -68,14 +70,14 @@ namespace UI
         {
             OnPlayerTurnChanged(newId);
         }
-        
+
         /// <summary>
         /// สลับการติดตามเวลาไปยังตัวละครที่กำลังอยู่ในเทิร์น (Active Actor)
         /// </summary>
         /// <param name="activeActorId">NetworkObjectId ของ Active Actor</param>
         private void OnPlayerTurnChanged(ulong activeActorId)
         {
-            // STEP 1: ล้าง Event ของตัวละครก่อนหน้า (ถ้ามี)
+            // STEP 1: ล้าง Event ของตัวละครก่อนหน้า 
             if (_activePlayerPointSystem != null)
             {
                 _activePlayerPointSystem.OnVirtualTimeChanged -= UpdateTimeUI;
@@ -96,7 +98,7 @@ namespace UI
         }
 
         /// <summary>
-        /// อัปเดตข้อความเวลาบนหน้าจอ
+        /// อัปเดตข้อความเวลาบน UI
         /// </summary>
         /// <param name="totalSeconds">เวลาทั้งหมดเป็นวินาที</param>
         private void UpdateTimeUI(int totalSeconds)
@@ -111,13 +113,13 @@ namespace UI
         }
 
         /// <summary>
-        /// อัปเดตข้อความรอบการเล่น
+        /// อัปเดตรอบ (Round) บน UI
         /// </summary>
         /// <param name="turn">รอบที่</param>
         private void UpdateTurnUI(int turn) => turnText.text = turn > 0 ? $"Round: {turn}" : "";
         
         /// <summary>
-        /// อัปเดตข้อความเดือน (Cycle)
+        /// อัปเดตเดือน (Cycle) บน UI
         /// </summary>
         /// <param name="cycle">เดือนที่</param>
         private void UpdateCycleUI(int cycle) => cycleText.text = cycle > 0 ? $"Month: {cycle}" : "";

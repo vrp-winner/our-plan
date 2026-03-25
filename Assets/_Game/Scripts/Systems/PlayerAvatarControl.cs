@@ -49,7 +49,7 @@ namespace Systems
 
                 // ตรวจสอบสถานะเกมและเปิดใช้งานตัวละครที่กำลังเข้าเทิร์น
                 if (TurnManager.Instance.IsGameStarted)
-                    CheckTurnVisibility(TurnManager.Instance.ActiveActorNetworkId.Value);
+                    CheckTurnVisibility(TurnManager.Instance.activeActorNetworkId.Value);
                 else
                     UpdateVisuals(false);
             }
@@ -94,7 +94,7 @@ namespace Systems
         /// <param name="isStarted">เกมเริ่มแล้วหรือยัง</param>
         private void OnGameStateChanged(bool isStarted)
         {
-            if (isStarted) CheckTurnVisibility(TurnManager.Instance.ActiveActorNetworkId.Value);
+            if (isStarted) CheckTurnVisibility(TurnManager.Instance.activeActorNetworkId.Value);
             else UpdateVisuals(false);
         }
 

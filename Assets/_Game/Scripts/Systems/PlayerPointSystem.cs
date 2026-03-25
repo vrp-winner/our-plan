@@ -35,8 +35,8 @@ namespace Systems
 
             if (IsServer)
             {
-                TurnManager.Instance.ActiveActorNetworkId.OnValueChanged += HandleActiveActorChanged;
-                if (TurnManager.Instance.ActiveActorNetworkId.Value == this.NetworkObjectId)
+                TurnManager.Instance.activeActorNetworkId.OnValueChanged += HandleActiveActorChanged;
+                if (TurnManager.Instance.activeActorNetworkId.Value == this.NetworkObjectId)
                 {
                     _pointsRemaining.Value = gameConfig.MaxPointsPerTurn;
                 }
@@ -49,7 +49,7 @@ namespace Systems
         {
             if (IsServer && TurnManager.Instance != null)
             {
-                TurnManager.Instance.ActiveActorNetworkId.OnValueChanged -= HandleActiveActorChanged;
+                TurnManager.Instance.activeActorNetworkId.OnValueChanged -= HandleActiveActorChanged;
             }
         }
         #endregion
@@ -67,7 +67,7 @@ namespace Systems
         public void UsePointsServerRpc(int pointAmount)
         {
             if (!IsServer) return;
-            if (TurnManager.Instance.ActiveActorNetworkId.Value != this.NetworkObjectId) return;
+            if (TurnManager.Instance.activeActorNetworkId.Value != this.NetworkObjectId) return;
             
             bool canUsePoints = GameActionProcessor.TryProcessPointUsage(
                 _pointsRemaining.Value, 
@@ -92,7 +92,7 @@ namespace Systems
         public void RequestAction(int pointCost)
         {
             if (!IsOwner) return;
-            if (TurnManager.Instance.ActiveActorNetworkId.Value != this.NetworkObjectId) return;
+            if (TurnManager.Instance.activeActorNetworkId.Value != this.NetworkObjectId) return;
 
             UsePointsServerRpc(pointCost);
         }
@@ -100,7 +100,7 @@ namespace Systems
         public void SleepAndEndTurn()
         {
             if (!IsOwner) return;
-            if (TurnManager.Instance.ActiveActorNetworkId.Value != this.NetworkObjectId) return;
+            if (TurnManager.Instance.activeActorNetworkId.Value != this.NetworkObjectId) return;
 
             // กดนอน = ใช้แต้มที่เหลือทั้งหมดจนเป็น 0
             UsePointsServerRpc(_pointsRemaining.Value);
