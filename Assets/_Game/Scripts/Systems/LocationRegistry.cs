@@ -5,55 +5,73 @@ namespace Systems
 {
     /// <summary>
     /// Registry Pattern: ใช้สำหรับเก็บ Location registry ในฉาก
+    /// มีฟังก์ชัน Debug ตรวจสอบสถานที่
     /// </summary>
     public static class LocationRegistry
     {
-        private static readonly Dictionary<string, InteractableLocation> _locations = new Dictionary<string, InteractableLocation>();
+        private static readonly Dictionary<string, InteractableLocation> Locations = new Dictionary<string, InteractableLocation>();
 
         /// <summary>
-        /// Registers a location in the system.
+        /// เพิ่ม Location เข้า Registry
         /// </summary>
-        /// <param name="locationId">The unique identifier ของ Location</param>
-        /// <param name="location">Location component</param>
+        /// <param name="locationId">ID ของสถานที่</param>
+        /// <param name="location">Component ของสถานที่</param>
         public static void Register(string locationId, InteractableLocation location)
         {
-            if (!_locations.ContainsKey(locationId))
+            // STEP 1: ตรวจสอบการซ้ำซ้อน
+            if (!Locations.ContainsKey(locationId))
             {
-                _locations.Add(locationId, location);
+                Locations.Add(locationId, location);
+            }
+            else
+            {
+                Debug.LogWarning($"[LocationRegistry] LocationId ซ้ำ! ไม่สามารถเพิ่ม '{locationId}' ได้");
             }
         }
 
         /// <summary>
-        /// Unregisters a location from the system.
+        /// เอา Location ออกจาก Registry
         /// </summary>
-        /// <param name="locationId">The unique identifier ของ Location</param>
         public static void Unregister(string locationId)
         {
-            if (_locations.ContainsKey(locationId))
+            if (Locations.ContainsKey(locationId))
             {
-                _locations.Remove(locationId);
+                Locations.Remove(locationId);
             }
         }
 
         /// <summary>
-        /// ค้นหา Location จาก locationId
+        /// ดึง Location จาก ID
         /// </summary>
-        /// <param name="locationId">The unique identifier ของ Location</param>
-        /// <returns>Location component</returns>
         public static InteractableLocation GetLocation(string locationId)
         {
-            _locations.TryGetValue(locationId, out var location);
+            // STEP 2: Log แจ้งเตือนเมื่อค้นหา Config ไม่เจอ
+            if (!Locations.TryGetValue(locationId, out var location))
+            {
+                Debug.LogWarning($"[LocationRegistry] ไม่พบ LocationId: '{locationId}'");
+            }
             return location;
         }
 
         /// <summary>
-        /// ล้างข้อมูล Location ทั้งหมด (ใช้เมื่อโหลด Scene ใหม่ หรือ Reset เกม)
+        /// ล้าง Location ทั้งหมด
         /// </summary>
         public static void Clear()
         {
-            // STEP 1: เคลียร์ Dictionary เพื่อป้องกัน memory leak หรือ Reference ค้าง
-            _locations.Clear();
-            Debug.Log("[LocationRegistry] Cleared all registered locations.");
+            Locations.Clear();
+            Debug.Log("[LocationRegistry] ล้าง Location ทั้งหมดเรียบร้อย");
+        }
+
+        /// <summary>
+        /// แสดงรายชื่อ Location ที่ลงทะเบียนทั้งหมด (ใช้ตรวจสอบตอนเริ่มเกม)
+        /// </summary>
+        public static void DebugAllRegisteredLocations()
+        {
+            Debug.Log($"[LocationRegistry] มี Location ลงทะเบียนทั้งหมด: {Locations.Count} แห่ง");
+            foreach (var loc in Locations)
+            {
+                Debug.Log($" - ID: {loc.Key} | GameObject: {loc.Value.gameObject.name}");
+            }
         }
     }
 }

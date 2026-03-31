@@ -21,3 +21,5 @@ MonoBehaviour:
     <RelationshipEffect>k__BackingField: 0
     <StressEffect>k__BackingField: 0
     <MoneyEffect>k__BackingField: 0
+    <IsConsumeAllPoints>k__BackingField: 1
+    <EndsTurn>k__BackingField: 1

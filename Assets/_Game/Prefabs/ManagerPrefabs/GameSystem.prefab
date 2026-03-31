@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: -2941593709554513382}
   - component: {fileID: 1573185047811088978}
   - component: {fileID: -709390317350004835}
+  - component: {fileID: 5737194865414217994}
   m_Layer: 0
   m_Name: GameSystem
   m_TagString: Untagged
@@ -48,7 +49,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 3032437196
+  GlobalObjectIdHash: 135366493
   InScenePlacedSourceGlobalObjectIdHash: 3032437196
   DeferredDespawnTick: 0
   Ownership: 1
@@ -120,9 +121,100 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Managers.TurnManager
   ShowTopMostFoldoutHeaderGroup: 1
   playerRequired: 2
-  totalActors: 4
   maxCycles: 15
-  playerPrefab: {fileID: 5480560724008698887, guid: eabfedfac9c52ec43af28d8c8d9e08aa, type: 3}
-  centerSpawnPoint: {fileID: 7261506984029591589, guid: 785ac106311b91f449b1bc476a69f09c, type: 3}
-  ActiveActorNetworkId:
+  activeActorNetworkId:
     m_InternalValue: 0
+  isGameStartedState:
+    m_InternalValue: 0
+  currentRound:
+    m_InternalValue: 0
+  currentCycle:
+    m_InternalValue: 1
+  CurrentInteractionLocationId:
+    m_InternalValue:
+      utf8LengthInBytes: 0
+      bytes:
+        offset0000:
+          byte0000: 0
+          byte0001: 0
+          byte0002: 0
+          byte0003: 0
+          byte0004: 0
+          byte0005: 0
+          byte0006: 0
+          byte0007: 0
+          byte0008: 0
+          byte0009: 0
+          byte0010: 0
+          byte0011: 0
+          byte0012: 0
+          byte0013: 0
+          byte0014: 0
+          byte0015: 0
+        offset0016:
+          byte0000: 0
+          byte0001: 0
+          byte0002: 0
+          byte0003: 0
+          byte0004: 0
+          byte0005: 0
+          byte0006: 0
+          byte0007: 0
+          byte0008: 0
+          byte0009: 0
+          byte0010: 0
+          byte0011: 0
+          byte0012: 0
+          byte0013: 0
+          byte0014: 0
+          byte0015: 0
+        offset0032:
+          byte0000: 0
+          byte0001: 0
+          byte0002: 0
+          byte0003: 0
+          byte0004: 0
+          byte0005: 0
+          byte0006: 0
+          byte0007: 0
+          byte0008: 0
+          byte0009: 0
+          byte0010: 0
+          byte0011: 0
+          byte0012: 0
+          byte0013: 0
+          byte0014: 0
+          byte0015: 0
+        byte0048: 0
+        byte0049: 0
+        byte0050: 0
+        byte0051: 0
+        byte0052: 0
+        byte0053: 0
+        byte0054: 0
+        byte0055: 0
+        byte0056: 0
+        byte0057: 0
+        byte0058: 0
+        byte0059: 0
+        byte0060: 0
+        byte0061: 0
+  IsInteractionOpen:
+    m_InternalValue: 0
+  CurrentTime:
+    m_InternalValue: 0
+--- !u!114 &5737194865414217994
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5358603181612879035}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: edae93cb5cccd2f4ea22c88d6cec6b43, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Managers.PlayerSpawnManager
+  ShowTopMostFoldoutHeaderGroup: 1
+  playerPrefab: {fileID: 7084411390377859537, guid: a67c4b41e73610448a3fd3903b55df3b, type: 3}
+  centerSpawnPoint: {fileID: 0}

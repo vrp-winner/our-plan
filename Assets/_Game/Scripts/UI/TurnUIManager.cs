@@ -1,128 +1,92 @@
 using UnityEngine;
 using TMPro;
 using Managers;
-using Systems;
-using Unity.Netcode;
 
 namespace UI
 {
     /// <summary>
-    /// ตัวจัดการ UI ในการแสดงสถานะ Turn/Month และเวลาของ Active Actor (Presentation Layer)
-    /// อัปเดตการ Sync UI ตรงๆ จาก NetworkVariable เพื่อให้ทุก Client เห็นตรงกัน 100%
+    /// ตัวจัดการ UI ในการแสดงสถานะ Turn/Month และเวลา
+    /// ใช้ Reactive + Initial Sync Pattern เพื่อรองรับ UI ถูกเปิด/ปิดหลายรอบ (Subscribe -> Clear -> Sync)
     /// </summary>
     public class TurnUIManager : MonoBehaviour
     {
-        #region References (UI References)
+        #region UI References
         [Header("References")]
         [SerializeField] private TextMeshProUGUI turnText;
         [SerializeField] private TextMeshProUGUI cycleText;
         [SerializeField] private TextMeshProUGUI timeText;
 
-        private PlayerPointSystem _activePlayerPointSystem;
+        private bool _hasReceivedFirstSync = false;
         #endregion
 
         #region Unity Lifecycle
-        /// <summary>
-        /// ผูก Event การอัปเดตรอบและเทิร์นจาก TurnManager
-        /// </summary>
-        private void Start()
+        private void OnEnable()
         {
-            // STEP 1: ตรวจสอบ Instance ของ TurnManager
             if (TurnManager.Instance != null)
             {
-                // STEP 2: ผูก Event ต่างๆ
+                // 1. Subscribe Event
                 TurnManager.Instance.OnRoundChanged += UpdateTurnUI;
                 TurnManager.Instance.OnCycleChanged += UpdateCycleUI;
-                TurnManager.Instance.activeActorNetworkId.OnValueChanged += HandleActiveActorChanged;
-                
-                // STEP 3: [CRITICAL FIX] บังคับโหลดค่าจาก NetworkVariable ทันทีเมื่อเกิด เพื่อป้องกัน UI ว่าง
+                TurnManager.Instance.currentTime.OnValueChanged += OnTimeChanged;
+
+                // 2. Clear UI
+                ClearInitialUI();
+
+                // 3. Initial Sync
                 UpdateTurnUI(TurnManager.Instance.currentRound.Value);
                 UpdateCycleUI(TurnManager.Instance.currentCycle.Value);
-                OnPlayerTurnChanged(TurnManager.Instance.activeActorNetworkId.Value);
+                OnTimeChanged(0, TurnManager.Instance.currentTime.Value);
             }
         }
         
-        /// <summary>
-        /// เคลียร์ Event เมื่อถูกทำลาย
-        /// </summary>
-        private void OnDestroy()
+        private void OnDisable()
         {
             if (TurnManager.Instance != null)
             {
+                // Unsubscribe Event
                 TurnManager.Instance.OnRoundChanged -= UpdateTurnUI;
                 TurnManager.Instance.OnCycleChanged -= UpdateCycleUI;
-                TurnManager.Instance.activeActorNetworkId.OnValueChanged -= HandleActiveActorChanged;
-            }
-            if (_activePlayerPointSystem != null)
-            {
-                _activePlayerPointSystem.OnVirtualTimeChanged -= UpdateTimeUI;
+                TurnManager.Instance.currentTime.OnValueChanged -= OnTimeChanged;
             }
         }
         #endregion
 
-        #region Update Logic (Time & Turn Logic)
-        /// <summary>
-        /// รับ Event เมื่อ Active Actor Network ID มีการเปลี่ยนแปลง
-        /// </summary>
-        /// <param name="oldId">ID เดิม</param>
-        /// <param name="newId">ID ใหม่</param>
-        private void HandleActiveActorChanged(ulong oldId, ulong newId)
+        #region Update Logic
+        private void ClearInitialUI()
         {
-            OnPlayerTurnChanged(newId);
+            turnText.text = "";
+            cycleText.text = "";
+            timeText.text = "";
         }
 
-        /// <summary>
-        /// สลับการติดตามเวลาไปยังตัวละครที่กำลังอยู่ในเทิร์น (Active Actor)
-        /// </summary>
-        /// <param name="activeActorId">NetworkObjectId ของ Active Actor</param>
-        private void OnPlayerTurnChanged(ulong activeActorId)
+        private void OnTimeChanged(int oldVal, int newVal)
         {
-            // STEP 1: ล้าง Event ของตัวละครก่อนหน้า 
-            if (_activePlayerPointSystem != null)
-            {
-                _activePlayerPointSystem.OnVirtualTimeChanged -= UpdateTimeUI;
-            }
+            if (!_hasReceivedFirstSync && newVal <= 0) return;
 
-            // STEP 2: ค้นหา Object ด้วย NetworkObjectId ในฝั่ง Client
-            if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(activeActorId, out var netObj))
-            {
-                _activePlayerPointSystem = netObj.GetComponent<PlayerPointSystem>();
-                
-                // STEP 3: ผูก Event ตัวใหม่และสั่งโหลดข้อมูล
-                if (_activePlayerPointSystem != null)
-                {
-                    _activePlayerPointSystem.OnVirtualTimeChanged += UpdateTimeUI;
-                    _activePlayerPointSystem.RefreshTimeUI();
-                }
-            }
+            _hasReceivedFirstSync = true;
+            UpdateTimeUI(newVal);
         }
 
-        /// <summary>
-        /// อัปเดตข้อความเวลาบน UI
-        /// </summary>
-        /// <param name="totalSeconds">เวลาทั้งหมดเป็นวินาที</param>
         private void UpdateTimeUI(int totalSeconds)
         {
-            // STEP 1: แปลงเวลาเป็นรูปแบบ นาที:วินาที
             int minutes = totalSeconds / 60;
             int seconds = totalSeconds % 60;
 
-            // STEP 2: แสดงผลและตั้งค่าสีแจ้งเตือน
             timeText.text = $"Time: {minutes:00}:{seconds:00}";
             timeText.color = totalSeconds <= 20 ? Color.red : Color.white;
         }
 
-        /// <summary>
-        /// อัปเดตรอบ (Round) บน UI
-        /// </summary>
-        /// <param name="turn">รอบที่</param>
-        private void UpdateTurnUI(int turn) => turnText.text = turn > 0 ? $"Round: {turn}" : "";
+        private void UpdateCycleUI(int cycle) 
+        {
+            if (cycle <= 0) return;
+            cycleText.text = $"Month: {cycle}";
+        }
         
-        /// <summary>
-        /// อัปเดตเดือน (Cycle) บน UI
-        /// </summary>
-        /// <param name="cycle">เดือนที่</param>
-        private void UpdateCycleUI(int cycle) => cycleText.text = cycle > 0 ? $"Month: {cycle}" : "";
+        private void UpdateTurnUI(int turn) 
+        {
+            if (turn <= 0) return;
+            turnText.text = $"Round: {turn}";
+        }
         #endregion
     }
 }

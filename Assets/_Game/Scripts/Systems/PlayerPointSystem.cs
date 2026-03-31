@@ -1,48 +1,46 @@
 using UnityEngine;
 using Unity.Netcode;
+using Unity.Collections;
 using Managers;
-using System;
 using Configs;
-using UI;
 using Domain;
 
 namespace Systems
 {
     /// <summary>
-    /// ระบบจัดการแต้ม (Time/Action Points) ของตัวละคร
-    /// ลดความซับซ้อนของ RPC กลับไปใช้ SendTo.Owner และให้การปิด UI ทำงานแบบ Local
+    /// ตัวจัดการเวลาของผู้เล่น
+    /// แยกสถานะการยืน (CurrentLocation) ออกจากสถานะการทำ Action
     /// </summary>
     public class PlayerPointSystem : NetworkBehaviour
     {
-        #region Variables (ตัวแปรตั้งค่า)
+        #region Variables
         [Header("Configuration")]
         [SerializeField] private GameConfig gameConfig;
 
-        // เปลี่ยนมาใช้ int ทั้งหมดเพื่อความแม่นยำของ Point
         private readonly NetworkVariable<int> _pointsRemaining = new NetworkVariable<int>(0);
-        private bool _isSick = false; // สำหรับสถานะป่วย
+        private const bool IsSick = false;
 
-        public event Action<int> OnVirtualTimeChanged;
+        // จำว่าผู้เล่นพึ่งทำ Action ที่ Location ไหน
+        private string _lastInteractedLocation = string.Empty;
+        
+        // Location ปัจจุบันที่ผู้เล่นยืนอยู่
+        public string CurrentLocationId { get; private set; } = string.Empty;
+        
+        public int PointsRemaining => _pointsRemaining.Value;
         #endregion
 
-        #region Lifecycle (การแจกเวลา)
+        #region Lifecycle
         public override void OnNetworkSpawn()
         {
-            // ทุกครั้งที่แต้มเปลี่ยน ส่งค่า (แต้ม * วินาทีต่อแต้ม) ไปให้ UI แสดงผล
-            _pointsRemaining.OnValueChanged += (oldVal, newVal) => {
-                OnVirtualTimeChanged?.Invoke(newVal * gameConfig.SecondsPerPoint);
-            };
-
             if (IsServer)
             {
                 TurnManager.Instance.activeActorNetworkId.OnValueChanged += HandleActiveActorChanged;
                 if (TurnManager.Instance.activeActorNetworkId.Value == this.NetworkObjectId)
                 {
                     _pointsRemaining.Value = gameConfig.MaxPointsPerTurn;
+                    TurnManager.Instance.currentTime.Value = _pointsRemaining.Value * gameConfig.SecondsPerPoint;
                 }
             }
-
-            RefreshTimeUI();
         }
 
         public override void OnNetworkDespawn()
@@ -54,138 +52,97 @@ namespace Systems
         }
         #endregion
 
-        #region Server Logic (ระบบใช้แต้มและสลับเทิร์น)
+        #region Turn logic
         private void HandleActiveActorChanged(ulong oldId, ulong newId)
         {
-            if (this.NetworkObjectId == newId)
+            if (this.NetworkObjectId == newId && IsServer)
             {
                 _pointsRemaining.Value = gameConfig.MaxPointsPerTurn;
+                TurnManager.Instance.currentTime.Value = _pointsRemaining.Value * gameConfig.SecondsPerPoint;
+                
+                _lastInteractedLocation = string.Empty;
             }
         }
-        
-        [Rpc(SendTo.Server)]
-        public void UsePointsServerRpc(int pointAmount)
+        #endregion
+
+        #region Point Management (Server Only)
+        public bool HasEnoughPoints(int pointAmount)
+        {
+            return GameActionProcessor.TryProcessPointUsage(
+                _pointsRemaining.Value, pointAmount, IsSick, gameConfig.CostSickPenalty, out _);
+        }
+
+        public void ConsumePoints(int pointAmount)
         {
             if (!IsServer) return;
-            if (TurnManager.Instance.activeActorNetworkId.Value != this.NetworkObjectId) return;
             
-            bool canUsePoints = GameActionProcessor.TryProcessPointUsage(
-                _pointsRemaining.Value, 
-                pointAmount, 
-                _isSick, 
-                gameConfig.CostSickPenalty, 
-                out int newPointsRemaining
-            );
-
-            if (canUsePoints)
+            if (GameActionProcessor.TryProcessPointUsage(_pointsRemaining.Value, pointAmount, IsSick, gameConfig.CostSickPenalty, out int newPointsRemaining))
             {
                 _pointsRemaining.Value = newPointsRemaining;
+                TurnManager.Instance.currentTime.Value = _pointsRemaining.Value * gameConfig.SecondsPerPoint;
+
                 if (_pointsRemaining.Value <= 0)
                 {
                     TurnManager.Instance.RequestEndTurnRpc();
                 }
             }
         }
-        #endregion
 
-        #region Client Input
-        public void RequestAction(int pointCost)
+        public void ConsumeAllPoints()
         {
-            if (!IsOwner) return;
-            if (TurnManager.Instance.activeActorNetworkId.Value != this.NetworkObjectId) return;
-
-            UsePointsServerRpc(pointCost);
+            if (!IsServer) return;
+            _pointsRemaining.Value = 0;
+            TurnManager.Instance.currentTime.Value = 0;
+            TurnManager.Instance.RequestEndTurnRpc();
         }
 
-        public void SleepAndEndTurn()
+        public void MarkLocationAsInteracted(string locationId)
         {
-            if (!IsOwner) return;
-            if (TurnManager.Instance.activeActorNetworkId.Value != this.NetworkObjectId) return;
-
-            // กดนอน = ใช้แต้มที่เหลือทั้งหมดจนเป็น 0
-            UsePointsServerRpc(_pointsRemaining.Value);
-            Debug.Log("ผู้เล่นกด Sleep -> ใช้แต้มที่เหลือทั้งหมด");
+            if (IsServer) 
+            {
+                _lastInteractedLocation = locationId;
+            }
         }
         #endregion
 
-        #region Location Interactions (Simplified UI Flow)
-        /// <summary>
-        /// แจ้ง Owner Client เพื่อเปิดหน้าต่าง UI
-        /// </summary>
-        /// <param name="locationId">รหัสอ้างอิงของสถานที่</param>
+        #region Location Interactions (Server Controlled)
         public void NotifyLocationEnter(string locationId)
         {
-            if (IsServer)
+            if (!IsServer) return;
+
+            // เปลี่ยน Location -> รีเซ็ตสถานะการกด Action
+            if (CurrentLocationId != locationId)
             {
-                // STEP 1: ใช้ Rpc แบบอ่านง่าย ส่งตรงเข้า Owner
-                EnterLocationClientRpc(locationId);
+                _lastInteractedLocation = string.Empty;
             }
+
+            // อัปเดตตำแหน่งปัจจุบัน
+            CurrentLocationId = locationId;
+
+            // เปิด UI ถ้ายังไม่เคยทำ Action ที่นี่
+            if (_lastInteractedLocation != locationId)
+            {
+                TurnManager.Instance.currentInteractionLocationId.Value = new FixedString64Bytes(locationId);
+                TurnManager.Instance.isInteractionOpen.Value = true;
+            }
+#if UNITY_EDITOR
+            else
+            {
+                Debug.Log($"[UI Blocked] {locationId} already interacted");
+            }
+#endif
         }
         
-        /// <summary>
-        /// แจ้ง Owner Client เพื่อปิดหน้าต่าง UI (กรณีเดินออกด้วยคำสั่งอื่น)
-        /// </summary>
         public void NotifyLocationExit()
         {
-            if (IsServer)
-            {
-                ExitLocationClientRpc();
-            }
-        }
+            if (!IsServer) return;
 
-        /// <summary>
-        /// RPC: สั่งเปิด UI ไปที่ Owner
-        /// </summary>
-        [Rpc(SendTo.Owner)]
-        private void EnterLocationClientRpc(string locationId)
-        {
-            InteractableLocation loc = LocationRegistry.GetLocation(locationId);
-            if (loc != null)
-            {
-                InteractionUIManager.Instance.ShowLocation(loc.Config, this);
-            }
-        }
+            // ล้างสถานะเมื่อออกจาก Location
+            _lastInteractedLocation = string.Empty;
+            CurrentLocationId = string.Empty;
 
-        /// <summary>
-        /// RPC: สั่งปิด UI ไปที่ Owner
-        /// </summary>
-        [Rpc(SendTo.Owner)]
-        private void ExitLocationClientRpc()
-        {
-            if (InteractionUIManager.Instance != null)
-            {
-                InteractionUIManager.Instance.HideUI();
-            }
-        }
-        
-        /// <summary>
-        /// ร้องขอปิดหน้าต่าง UI (ทำงานแบบ Local ล้วน ไม่เปลือง Network)
-        /// </summary>
-        public void RequestCloseInteractionUI()
-        {
-            // STEP 1: Guard Check
-            if (!IsOwner) return;
-            
-            // STEP 2: ปิดฝั่ง Client ไปเลย ไม่ต้องเรียก RPC ไปหา Server อีกแล้ว
-            if (InteractionUIManager.Instance != null)
-            {
-                InteractionUIManager.Instance.HideUI();
-            }
-        }
-        #endregion
-
-        #region Utilities (อื่นๆ)
-        public void OnEnterHome()
-        {
-            if (IsServer && TryGetComponent(out PlayerStatus status))
-            {
-                StatusManager.Instance.ProcessHomeEntry(status);
-            }
-        }
-        
-        public void RefreshTimeUI()
-        {
-            OnVirtualTimeChanged?.Invoke(_pointsRemaining.Value * gameConfig.SecondsPerPoint);
+            TurnManager.Instance.currentInteractionLocationId.Value = new FixedString64Bytes("");
+            TurnManager.Instance.isInteractionOpen.Value = false;
         }
         #endregion
     }

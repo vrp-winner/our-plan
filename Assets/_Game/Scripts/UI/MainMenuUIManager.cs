@@ -205,14 +205,14 @@ namespace UI
                 statusText.text = $"รอผู้เล่นเข้าร่วม... ({currentPlayers}/{required})";
                 if (currentPlayers >= required)
                 {
-                    statusText.text = "ผู้เล่นครบแล้ว! พร้อมลุย!";
+                    statusText.text = "ผู้เล่นครบแล้ว! \nพร้อมลุย!";
                     startGameBtn.gameObject.SetActive(true);
                     startGameBtn.interactable = true;
                 }
             }
             else
             {
-                statusText.text = "กำลังเชื่อมต่อ... รอ Host กดเริ่มเกม";
+                statusText.text = "กำลังเชื่อมต่อ... \nรอ Host กดเริ่มเกม";
             }
         }
 

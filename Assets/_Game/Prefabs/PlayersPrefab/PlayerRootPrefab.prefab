@@ -197,7 +197,9 @@ GameObject:
   - component: {fileID: 5333711820374789213}
   - component: {fileID: 5921604408737322834}
   - component: {fileID: 1188949843364353763}
+  - component: {fileID: 5974717548711058815}
   - component: {fileID: 5480033078404783441}
+  - component: {fileID: -8814119458712712007}
   m_Layer: 0
   m_Name: PlayerRootPrefab
   m_TagString: Player
@@ -324,9 +326,6 @@ MonoBehaviour:
   interactableLayer:
     serializedVersion: 2
     m_Bits: 64
-  groundLayer:
-    serializedVersion: 2
-    m_Bits: 8
 --- !u!114 &5921604408737322834
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -340,8 +339,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Systems.PlayerAvatarControl
   ShowTopMostFoldoutHeaderGroup: 1
-  visualModel: {fileID: 8210704177051044057}
-  col: {fileID: 5480033078404783441}
   modelVariants:
   - {fileID: 4300913074414723017}
   - {fileID: 8646114798980727677}
@@ -360,12 +357,25 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Systems.PlayerStatus
   ShowTopMostFoldoutHeaderGroup: 1
-  TeamId:
+  teamId:
     m_InternalValue: 0
-  MemberIndex:
+  memberIndex:
     m_InternalValue: 0
-  AvatarIndex:
+  avatarIndex:
     m_InternalValue: 0
+--- !u!114 &5974717548711058815
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7084411390377859537}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 11372ac90a0b4194a805730c6946c254, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Systems.PlayerActionHandler
+  ShowTopMostFoldoutHeaderGroup: 1
 --- !u!136 &5480033078404783441
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -389,6 +399,33 @@ CapsuleCollider:
   m_Height: 1
   m_Direction: 1
   m_Center: {x: 1, y: 1, z: 0}
+--- !u!54 &-8814119458712712007
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7084411390377859537}
+  serializedVersion: 5
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 0
+  m_IsKinematic: 1
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
 --- !u!1 &7598095135217268768
 GameObject:
   m_ObjectHideFlags: 0

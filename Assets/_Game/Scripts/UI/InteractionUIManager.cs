@@ -4,15 +4,18 @@ using UnityEngine.UI;
 using Configs;
 using Systems;
 using Managers;
+using Unity.Collections;
+using Unity.Netcode;
 
 namespace UI
 {
     /// <summary>
-    /// จัดการ UI สำหรับการ Interact กับสถานที่ (Presentation Layer)
+    /// ตัวจัดการ UI สำหรับการ Interact กับสถานที่
+    /// ใช้ Reactive + Initial Sync Pattern เพื่อรองรับ UI ถูกเปิด/ปิดหลายรอบ (Subscribe -> Clear -> Sync)
     /// </summary>
     public class InteractionUIManager : MonoBehaviour
     {
-        #region References (UI References)
+        #region UI References
         public static InteractionUIManager Instance { get; private set; }
 
         [Header("UI References")]
@@ -23,8 +26,9 @@ namespace UI
         [SerializeField] private Button actionButtonPrefab;
         [SerializeField] private Button closeButton;
 
-        // เปลี่ยนประเภท Reference เป็น PlayerPointSystem
-        private PlayerPointSystem _currentUser;
+        private PlayerActionHandler _currentActionHandler;
+        private string _lastBoundLocationId = "";
+        private bool _forceRefresh = false; 
         #endregion
         
         #region Lifecycle
@@ -33,92 +37,167 @@ namespace UI
             if (Instance == null) Instance = this;
             else Destroy(gameObject);
             
-            if (closeButton != null)
+            // ผูก Close Button Listener ครั้งเดียว
+            closeButton.onClick.AddListener(OnCloseButtonClicked);
+            
+            panelRoot.SetActive(false);
+        }
+
+        private void OnEnable()
+        {
+            if (TurnManager.Instance != null)
             {
-                closeButton.onClick.AddListener(HideUI);
+                // 1. Subscribe Event
+                TurnManager.Instance.currentInteractionLocationId.OnValueChanged += OnLocationChanged;
+                TurnManager.Instance.isInteractionOpen.OnValueChanged += OnInteractionStateChanged;
+                
+                // 2. Clear UI
+                ClearUI();
+                
+                // 3. Initial Sync
+                OnInteractionStateChanged(false, TurnManager.Instance.isInteractionOpen.Value);
             }
-            HideUI();
+        }
+
+        private void OnDisable()
+        {
+            if (TurnManager.Instance != null)
+            {
+                // Unsubscribe Event
+                TurnManager.Instance.currentInteractionLocationId.OnValueChanged -= OnLocationChanged;
+                TurnManager.Instance.isInteractionOpen.OnValueChanged -= OnInteractionStateChanged;
+            }
         }
         #endregion
 
-        #region Presentation Logic (แสดงหน้าต่าง)
-        public void ShowLocation(LocationConfig config, PlayerPointSystem player)
+        #region Presentation Logic
+        private void OnLocationChanged(FixedString64Bytes oldVal, FixedString64Bytes newVal)
         {
-            _currentUser = player;
+            _forceRefresh = true; 
 
-            // เช็คว่าผู้เล่นที่มาแตะตึก คือคนที่มีเทิร์นปัจจุบันหรือไม่
-            bool isMyTurn = (player.NetworkObjectId == TurnManager.Instance.activeActorNetworkId.Value);
-            bool isOwner = player.IsOwner; // เป็นตัวละครของเราเองไหม
-
-            locationNameText.text = config.LocationName;
-
-            // ถ้าไม่ใช่ตาของเรา ให้แสดงข้อความบอก
-            descriptionText.text = isMyTurn ? config.Description : "It's not your turn yet...";
-
-            foreach (Transform child in actionButtonsContainer) Destroy(child.gameObject);
-
-            foreach (var action in config.AvailableActions)
+            if (TurnManager.Instance.isInteractionOpen.Value)
             {
-                // ปุ่มจะกดได้ (Interactable) เฉพาะเมื่อเป็นเจ้าของตัวละครและเป็นตาของเขาเท่านั้น
-                CreateActionButton(action, isOwner && isMyTurn);
+                TryBindUI();
             }
-
-            panelRoot.SetActive(true);
         }
 
-        public void HideUI()
+        private void OnInteractionStateChanged(bool oldVal, bool newVal)
         {
-            panelRoot.SetActive(false);
-            _currentUser = null;
+            panelRoot.SetActive(newVal);
+
+            if (newVal)
+            {
+                TryBindUI(); 
+            }
+            else
+            {
+                ClearUI();   
+            }
+        }
+
+        private void TryBindUI()
+        {
+            string locId = TurnManager.Instance.currentInteractionLocationId.Value.ToString();
+
+            if (string.IsNullOrEmpty(locId)) return; 
+
+            // Skip bind หากเป็น Location เดิมและไม่บังคับ refresh
+            if (!_forceRefresh && _lastBoundLocationId == locId) return;
+
+            _forceRefresh = false;
+            _lastBoundLocationId = locId; 
+            BindUIData(locId);
+        }
+
+        private void ClearUI()
+        {
+            _currentActionHandler = null;
+            _lastBoundLocationId = ""; 
+            _forceRefresh = false;
+
+            locationNameText.text = "";
+            descriptionText.text = "";
+
+            foreach (Transform child in actionButtonsContainer)
+            {
+                Destroy(child.gameObject);
+            }
+        }
+
+        private void BindUIData(string serverLocationId)
+        {
+            ulong activeId = TurnManager.Instance.activeActorNetworkId.Value;
+            if (activeId == 0) return;
+
+            var loc = LocationRegistry.GetLocation(serverLocationId);
+            if (loc == null) return;
+
+            if (NetworkManager.Singleton != null && 
+                NetworkManager.Singleton.SpawnManager != null && 
+                NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(activeId, out var netObj))
+            {
+                _currentActionHandler = netObj.GetComponent<PlayerActionHandler>();
+                
+                if (_currentActionHandler == null)
+                {
+                    Debug.LogError($"[UI] Missing PlayerActionHandler on Actor {activeId}");
+                    return;
+                }
+
+                bool isMyTurn = (netObj.OwnerClientId == NetworkManager.Singleton.LocalClientId);
+
+                locationNameText.text = loc.Config.LocationName;
+                descriptionText.text = isMyTurn ? loc.Config.Description : "ผู้เล่นอื่นกำลังตัดสินใจ...";
+
+                foreach (Transform child in actionButtonsContainer) Destroy(child.gameObject);
+
+                for (int i = 0; i < loc.Config.AvailableActions.Count; i++)
+                {
+                    CreateActionButton(loc.Config.AvailableActions[i], isMyTurn, loc.Config.LocationId, i);
+                }
+
+                closeButton.interactable = isMyTurn; 
+            }
         }
         
-        private void CreateActionButton(LocationAction action, bool isInteractive)
+        private void CreateActionButton(LocationAction action, bool isInteractive, string locId, int actionIndex)
         {
             Button btn = Instantiate(actionButtonPrefab, actionButtonsContainer);
             var btnText = btn.GetComponentInChildren<TextMeshProUGUI>();
 
-            if (btnText != null) btnText.text = $"{action.ActionName} (-{action.PointCost * 6}s)";
+            if (btnText != null) 
+            {
+                string costText = action.IsConsumeAllPoints ? "ALL" : $"-{action.PointCost * 6}s";
+                btnText.text = $"{action.ActionName} ({costText})";
+            }
 
             btn.interactable = isInteractive;
 
             if (isInteractive)
             {
-                btn.onClick.AddListener(() => OnActionClicked(action));
+                btn.onClick.AddListener(() => OnActionClicked(locId, actionIndex));
             }
         }
         #endregion
 
-        #region Input Execution (จัดการปุ่ม)
-        /// <summary>
-        /// เมื่อคลิก Action ส่งคำสั่งไปที่ Actor
-        /// </summary>
-        private void OnActionClicked(LocationAction action)
+        #region Input Execution
+        private void OnCloseButtonClicked()
         {
-            var playerRef = _currentUser;
-            
-            // STEP 1: ปิดหน้าจอ UI ลงทันทีแบบ Local (ไม่ต้องรอ Server ตอบกลับ)
-            HideUI();
-            
-            // STEP 2: ส่งคำสั่งต่อไปให้ Actor หากอ้างอิงยังอยู่
-            if (playerRef == null || !playerRef.IsOwner) return;
+            if (TurnManager.Instance == null || !TurnManager.Instance.isInteractionOpen.Value) return;
+            if (_currentActionHandler == null) return;
 
-            // STEP 3: ประมวลผล Action หรือ Sleep
-            if (action.ActionName == "Sleep")
-            {
-                playerRef.SleepAndEndTurn();
-                return;
-            }
-            
-            playerRef.RequestAction(action.PointCost);
+            ulong activeId = TurnManager.Instance.activeActorNetworkId.Value;
+            if (activeId == 0) return;
 
-            if (playerRef.TryGetComponent(out PlayerStatus status))
-            {
-                status.ModifyStatsServerRpc(
-                    action.RelationshipEffect,
-                    action.StressEffect,
-                    action.MoneyEffect
-                );
-            }
+            _currentActionHandler.RequestCloseUI_ServerRpc();
+        }
+
+        private void OnActionClicked(string locId, int actionIndex)
+        {
+            if (_currentActionHandler == null) return;
+            
+            PlayerActionHandler handlerToExecute = _currentActionHandler;
+            handlerToExecute.RequestExecuteLocationActionServerRpc(locId, actionIndex);
         }
         #endregion
     }
