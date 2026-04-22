@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 3968694587300777414}
   - component: {fileID: 5477179149578180571}
   m_Layer: 0
-  m_Name: Profile_HeadPlay1
+  m_Name: Player4_Sprite
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -81,8 +81,8 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 21300000, guid: 4f93a0af4d0220349a83b37258c340f0, type: 3}
-  m_Color: {r: 0, g: 0.06666667, b: 0.49803922, a: 1}
+  m_Sprite: {fileID: 21300000, guid: 8fea1d216ea060c4fb5f2b38f88acde7, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -102,7 +102,7 @@ GameObject:
   - component: {fileID: 2893588744951114532}
   - component: {fileID: 3478756720310053848}
   m_Layer: 0
-  m_Name: Profile_HeadPlay1
+  m_Name: Player1_Sprite
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -172,7 +172,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 21300000, guid: 4f93a0af4d0220349a83b37258c340f0, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 4b8c6ce2f9687494db0b116dd9e155f7, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -215,7 +215,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7084411390377859537}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.41712394, y: 0.31548074, z: -0.15708318, w: 0.8377377}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -395,10 +395,10 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.5
+  m_Radius: 1
   m_Height: 1
   m_Direction: 1
-  m_Center: {x: 1, y: 1, z: 0}
+  m_Center: {x: 0, y: 1, z: 0}
 --- !u!54 &-8814119458712712007
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -437,7 +437,7 @@ GameObject:
   - component: {fileID: 8322851650219180405}
   - component: {fileID: 2763743391483796395}
   m_Layer: 0
-  m_Name: Profile_HeadPlayer2
+  m_Name: Player3_Sprite
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -507,8 +507,8 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 21300000, guid: 4eea419775cf6b64584f15863c14e211, type: 3}
-  m_Color: {r: 0, g: 0.0631278, b: 0.4943396, a: 1}
+  m_Sprite: {fileID: 21300000, guid: b4d5f6ca7238bfb449ead3dd54911022, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -622,7 +622,7 @@ GameObject:
   - component: {fileID: 198311491068251142}
   - component: {fileID: 197892285532079037}
   m_Layer: 0
-  m_Name: Profile_HeadPlayer2
+  m_Name: Player2_Sprite
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -692,7 +692,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 21300000, guid: 4eea419775cf6b64584f15863c14e211, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 84da319cb218ed54cb1e53e00429bfac, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
