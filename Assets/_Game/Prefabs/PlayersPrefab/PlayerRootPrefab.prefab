@@ -342,8 +342,8 @@ MonoBehaviour:
   modelVariants:
   - {fileID: 4300913074414723017}
   - {fileID: 8646114798980727677}
-  - {fileID: 17693192777299117}
   - {fileID: 7598095135217268768}
+  - {fileID: 17693192777299117}
 --- !u!114 &1188949843364353763
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -40,7 +40,7 @@ namespace UI
         public Button players4Btn;
         public Button createBtn;
         public Button backFromCreateBtn;
-        private int _selectedMaxPlayers = 2; 
+        private int _selectedMaxPlayers = 0; 
 
         [Header("--- Lobby: Status & Info ---")]
         public TextMeshProUGUI inviteCodeText;
@@ -63,9 +63,24 @@ namespace UI
             playBtn.onClick.AddListener(() => SwitchPanel(connectionPanel));
             quitBtn.onClick.AddListener(() => Application.Quit());
 
-            hostGameBtn.onClick.AddListener(() => SwitchPanel(createGamePanel));
+            hostGameBtn.onClick.AddListener(() => 
+            {
+                _selectedMaxPlayers = 0;
+                players2Btn.GetComponent<Image>().color = Color.white;
+                players4Btn.GetComponent<Image>().color = Color.white;
+                SwitchPanel(createGamePanel);
+            });
+
             joinBtn.onClick.AddListener(OnJoinGameClicked);
             backFromConnectionBtn.onClick.AddListener(() => SwitchPanel(titlePanel));
+
+            if (joinCodeInput != null)
+            {
+                joinCodeInput.onValueChanged.AddListener((val) => 
+                {
+                    joinCodeInput.SetTextWithoutNotify(val.ToUpper());
+                });
+            }
 
             players2Btn.onClick.AddListener(() => SetMaxPlayers(2));
             players4Btn.onClick.AddListener(() => SetMaxPlayers(4));
@@ -109,6 +124,7 @@ namespace UI
         private void SetMaxPlayers(int count)
         {
             _selectedMaxPlayers = count;
+            
             players2Btn.GetComponent<Image>().color = (count == 2) ? Color.gray : Color.white;
             players4Btn.GetComponent<Image>().color = (count == 4) ? Color.gray : Color.white;
         }
@@ -117,11 +133,20 @@ namespace UI
         #region Actions (ส่งคำสั่งไป Manager)
         private async void OnCreateGameClicked()
         {
+            if (_selectedMaxPlayers == 0) 
+            {
+                Debug.Log("Please select number of players first!");
+                return; 
+            }
+
             createBtn.interactable = false; 
             bool success = await LobbyNetworkManager.Instance.StartHostRelay(_selectedMaxPlayers);
-            createBtn.interactable = true;
             
-            if (!success) Debug.LogError("สร้างห้องไม่สำเร็จ");
+            if (!success) 
+            {
+                createBtn.interactable = true;
+                Debug.LogError("สร้างห้องไม่สำเร็จ");
+            }
         }
 
         private async void OnJoinGameClicked()
@@ -129,10 +154,15 @@ namespace UI
             if (string.IsNullOrEmpty(joinCodeInput.text)) return;
 
             joinBtn.interactable = false;
-            bool success = await LobbyNetworkManager.Instance.StartClientRelay(joinCodeInput.text);
-            joinBtn.interactable = true;
 
-            if (!success) Debug.LogError("Join ไม่สำเร็จ (Code ผิด หรือ ห้องเต็ม)");
+            string upperCaseCode = joinCodeInput.text.ToUpper();
+            bool success = await LobbyNetworkManager.Instance.StartClientRelay(upperCaseCode);
+            
+            if (!success) 
+            {
+                joinBtn.interactable = true;
+                Debug.LogError("Join ไม่สำเร็จ (Code ผิด หรือ ห้องเต็ม)");
+            }
         }
 
         private void OnLeaveLobbyClicked()
@@ -174,15 +204,21 @@ namespace UI
             {
                 UnsubscribeLobbyEvents();
                 SwitchPanel(connectionPanel); 
+                joinBtn.interactable = true; 
             }
         }
+
+        // สร้างฟังก์ชันรับ Event แบบเต็มตัว เพื่อกัน Event Leak
+        private void OnPlayerListChanged(NetworkListEvent<ulong> changeEvent) => RefreshLobbyUI();
+        private void OnAvatarListChanged(NetworkListEvent<ulong> changeEvent) => RefreshLobbyUI();
 
         private void SubscribeLobbyEvents()
         {
             if (_isSubscribed || LobbyNetworkManager.Instance == null) return;
             
-            LobbyNetworkManager.Instance.ConnectedPlayers.OnListChanged += (changeEvent) => RefreshLobbyUI();
-            LobbyNetworkManager.Instance.AvatarSelections.OnListChanged += (changeEvent) => RefreshLobbyUI();
+            // ผูก Event ด้วยฟังก์ชันที่สร้างไว้
+            LobbyNetworkManager.Instance.ConnectedPlayers.OnListChanged += OnPlayerListChanged;
+            LobbyNetworkManager.Instance.AvatarSelections.OnListChanged += OnAvatarListChanged;
             LobbyNetworkManager.Instance.CountdownTimer.OnValueChanged += UpdateStatusText;
             
             _isSubscribed = true;
@@ -192,8 +228,9 @@ namespace UI
         {
             if (!_isSubscribed || LobbyNetworkManager.Instance == null) return;
 
-            LobbyNetworkManager.Instance.ConnectedPlayers.OnListChanged -= (changeEvent) => RefreshLobbyUI();
-            LobbyNetworkManager.Instance.AvatarSelections.OnListChanged -= (changeEvent) => RefreshLobbyUI();
+            // ยกเลิกผูก Event จะได้ไม่ชี้มาที่ UI ที่โดนทำลายไปแล้ว
+            LobbyNetworkManager.Instance.ConnectedPlayers.OnListChanged -= OnPlayerListChanged;
+            LobbyNetworkManager.Instance.AvatarSelections.OnListChanged -= OnAvatarListChanged;
             LobbyNetworkManager.Instance.CountdownTimer.OnValueChanged -= UpdateStatusText;
 
             _isSubscribed = false;
@@ -201,7 +238,7 @@ namespace UI
 
         private void UpdateStatusText(int oldValue, int newValue)
         {
-            if (statusText == null) return; // ดักเผื่อเปลี่ยน Scene ไปแล้ว
+            if (statusText == null) return; 
 
             if (newValue == -1)
             {
@@ -215,7 +252,8 @@ namespace UI
 
         private void RefreshLobbyUI()
         {
-            // เช็กก่อนว่ามีข้อมูลอยู่จริงไหม ป้องกัน IndexOutOfRange Exception ตอนเพิ่งสร้างห้องใหม่
+            if (this == null || gameObject == null || !gameObject.activeInHierarchy) return;
+
             if (LobbyNetworkManager.Instance == null) return;
             if (NetworkManager.Singleton == null || (!NetworkManager.Singleton.IsClient && !NetworkManager.Singleton.IsServer)) return;
 
@@ -229,7 +267,8 @@ namespace UI
             // 1. อัปเดตรายชื่อฝั่งซ้าย (Player Slots)
             for (int i = 0; i < playerSlots.Length; i++)
             {
-                // ตรวจสอบว่ามีข้อมูลคนเล่นใน Index นี้จริงๆ
+                if (playerSlots[i].slotRoot == null) return; // กันพังตอนเปลี่ยน Scene แบบฉิวเฉียด
+
                 if (i < connectedPlayers.Count)
                 {
                     playerSlots[i].slotRoot.SetActive(true);
@@ -240,7 +279,6 @@ namespace UI
 
                     int avatarIndex = LobbyNetworkManager.Instance.GetSelectedAvatarIndexForClient(playerId);
                     
-                    // ป้องกันเผื่อ Array ของรูปภาพที่ใส่ใน Inspector ไม่ครบ
                     if (avatarIndex != -1 && avatarIndex < avatarSprites.Length)
                     {
                         playerSlots[i].avatarImage.sprite = avatarSprites[avatarIndex];
@@ -259,7 +297,6 @@ namespace UI
             // 2. อัปเดตปุ่ม Avatar ฝั่งขวา
             for (int i = 0; i < avatarSelectButtons.Length; i++)
             {
-                // Safety check ป้องกัน Index พัง (เช่น ข้อมูล avatar ยังมีไม่ถึง 4 ช่อง)
                 if (i >= selections.Count) continue;
 
                 ulong ownerId = selections[i];

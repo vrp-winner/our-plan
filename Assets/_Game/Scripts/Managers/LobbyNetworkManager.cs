@@ -104,10 +104,16 @@ namespace Managers
                     allocation.ConnectionData
                 );
 
-                MaxPlayers.Value = maxPlayers;
-                CountdownTimer.Value = -1; 
+                // ย้าย StartHost() ขึ้นมา เพื่อให้ Network เตรียมพร้อม
+                // จากนั้นค่อยเซ็ตค่า NetworkVariable
+                bool isHostStarted = NetworkManager.Singleton.StartHost();
+                if (isHostStarted)
+                {
+                    MaxPlayers.Value = maxPlayers;
+                    CountdownTimer.Value = -1; 
+                }
 
-                return NetworkManager.Singleton.StartHost();
+                return isHostStarted;
             }
             catch (RelayServiceException e)
             {
@@ -120,7 +126,8 @@ namespace Managers
         {
             try
             {
-                CurrentJoinCode = joinCode;
+                // บังคับให้ Invite Code เป็นตัวพิมพ์ใหญ่ทั้งหมด
+                CurrentJoinCode = joinCode.ToUpper();
                 JoinAllocation joinAllocation = await RelayService.Instance.JoinAllocationAsync(joinCode);
 
                 var transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
@@ -266,6 +273,22 @@ namespace Managers
             if (CountdownTimer.Value == 0)
             {
                 Debug.Log("[Lobby] เวลาหมด เตรียมโหลด Scene เริ่มเกม...");
+
+                // ระบบ Auto-Assign Avatar (จับยัดตัวละครให้ผู้เล่นที่เลือกไม่ทัน)
+                foreach (ulong clientId in ConnectedPlayers)
+                {
+                    if (GetSelectedAvatarIndexForClient(clientId) == -1) // ถ้าหาไม่เจอว่าเลือกตัวไหน
+                    {
+                        for (int i = 0; i < AvatarSelections.Count; i++) // หาช่องที่ยังว่างอยู่
+                        {
+                            if (AvatarSelections[i] == ulong.MaxValue)
+                            {
+                                AvatarSelections[i] = clientId; // ยัดตัวละครนี้ให้เลย
+                                break;
+                            }
+                        }
+                    }
+                }
 
                 // ส่งข้อมูลการเลือกตัวละครไปให้ PlayerSpawnManager (ใน GameSystem)
                 if (PlayerSpawnManager.Instance != null)
