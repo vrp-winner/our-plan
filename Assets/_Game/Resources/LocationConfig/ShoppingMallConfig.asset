@@ -10,14 +10,14 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a56ed523c3bf1634c97a00a58a9ab376, type: 3}
-  m_Name: WorkConfig
+  m_Name: ShoppingMallConfig
   m_EditorClassIdentifier: Assembly-CSharp::Configs.LocationConfig
-  <LocationId>k__BackingField: LOC_Work
-  <LocationName>k__BackingField: Work
-  <Description>k__BackingField: Earn Money!
+  <LocationId>k__BackingField: LOC_ShoppingMall
+  <LocationName>k__BackingField: Shopping Mall
+  <Description>k__BackingField: 
   <AvailableActions>k__BackingField:
-  - <ActionName>k__BackingField: Work Hard
-    <PointCost>k__BackingField: 10
+  - <ActionName>k__BackingField: "\u0E0B\u0E37\u0E49\u0E2D\u0E02\u0E2D\u0E07"
+    <PointCost>k__BackingField: 4
     <RelationshipEffect>k__BackingField: 0
     <StressEffect>k__BackingField: 0
     <MoneyEffect>k__BackingField: 0

@@ -95,7 +95,7 @@ namespace Managers
             if (!IsServer || isGameStartedState.Value) return;
             
             isGameStartedState.Value = true;
-            NetworkManager.Singleton.SceneManager.LoadScene("GameScene", UnityEngine.SceneManagement.LoadSceneMode.Single);
+            NetworkManager.Singleton.SceneManager.LoadScene("Gameplay", UnityEngine.SceneManagement.LoadSceneMode.Single);
             NetworkManager.Singleton.SceneManager.OnLoadEventCompleted += OnGameplaySceneLoaded;
         }
 

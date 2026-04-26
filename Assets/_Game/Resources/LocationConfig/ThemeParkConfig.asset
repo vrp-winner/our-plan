@@ -10,16 +10,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a56ed523c3bf1634c97a00a58a9ab376, type: 3}
-  m_Name: HomeConfig
+  m_Name: ThemeParkConfig
   m_EditorClassIdentifier: Assembly-CSharp::Configs.LocationConfig
-  <LocationId>k__BackingField: LOC_Home
-  <LocationName>k__BackingField: Home
-  <Description>k__BackingField: Rest
+  <LocationId>k__BackingField: LOC_ThemePark
+  <LocationName>k__BackingField: Theme Park
+  <Description>k__BackingField: 
   <AvailableActions>k__BackingField:
-  - <ActionName>k__BackingField: Sleep
-    <PointCost>k__BackingField: 10
+  - <ActionName>k__BackingField: "\u0E40\u0E17\u0E35\u0E48\u0E22\u0E27 1"
+    <PointCost>k__BackingField: 8
     <RelationshipEffect>k__BackingField: 0
     <StressEffect>k__BackingField: 0
     <MoneyEffect>k__BackingField: 0
-    <IsConsumeAllPoints>k__BackingField: 1
-    <EndsTurn>k__BackingField: 1
+    <IsConsumeAllPoints>k__BackingField: 0
+    <EndsTurn>k__BackingField: 0

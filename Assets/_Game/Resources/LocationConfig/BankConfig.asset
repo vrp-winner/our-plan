@@ -21,8 +21,12 @@ MonoBehaviour:
     <RelationshipEffect>k__BackingField: 0
     <StressEffect>k__BackingField: 0
     <MoneyEffect>k__BackingField: 0
+    <IsConsumeAllPoints>k__BackingField: 0
+    <EndsTurn>k__BackingField: 0
   - <ActionName>k__BackingField: Pay Rent
     <PointCost>k__BackingField: 2
-    <RelationshipEffect>k__BackingField: 5
-    <StressEffect>k__BackingField: -5
+    <RelationshipEffect>k__BackingField: 0
+    <StressEffect>k__BackingField: 0
     <MoneyEffect>k__BackingField: 0
+    <IsConsumeAllPoints>k__BackingField: 0
+    <EndsTurn>k__BackingField: 0

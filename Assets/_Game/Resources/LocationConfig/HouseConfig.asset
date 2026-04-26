@@ -10,14 +10,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a56ed523c3bf1634c97a00a58a9ab376, type: 3}
-  m_Name: BeachConfig
+  m_Name: HouseConfig
   m_EditorClassIdentifier: Assembly-CSharp::Configs.LocationConfig
-  <LocationId>k__BackingField: LOC_Beach
-  <LocationName>k__BackingField: Beach
-  <Description>k__BackingField: 
+  <LocationId>k__BackingField: LOC_House
+  <LocationName>k__BackingField: House
+  <Description>k__BackingField: Rest
   <AvailableActions>k__BackingField:
-  - <ActionName>k__BackingField: "\u0E40\u0E17\u0E35\u0E48\u0E22\u0E27 1"
-    <PointCost>k__BackingField: 6
-    <RelationshipEffect>k__BackingField: 20
-    <StressEffect>k__BackingField: -15
+  - <ActionName>k__BackingField: Sleep
+    <PointCost>k__BackingField: 10
+    <RelationshipEffect>k__BackingField: 0
+    <StressEffect>k__BackingField: 0
     <MoneyEffect>k__BackingField: 0
+    <IsConsumeAllPoints>k__BackingField: 1
+    <EndsTurn>k__BackingField: 1
