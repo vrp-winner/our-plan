@@ -16,7 +16,7 @@ MonoBehaviour:
   <LocationName>k__BackingField: Shopping Mall
   <Description>k__BackingField: 
   <AvailableActions>k__BackingField:
-  - <ActionName>k__BackingField: "\u0E0B\u0E37\u0E49\u0E2D\u0E02\u0E2D\u0E07"
+  - <ActionName>k__BackingField: Buy
     <PointCost>k__BackingField: 4
     <RelationshipEffect>k__BackingField: 0
     <StressEffect>k__BackingField: 0

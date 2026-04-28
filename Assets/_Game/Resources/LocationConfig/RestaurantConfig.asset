@@ -16,7 +16,7 @@ MonoBehaviour:
   <LocationName>k__BackingField: Restaurant
   <Description>k__BackingField: 
   <AvailableActions>k__BackingField:
-  - <ActionName>k__BackingField: "\u0E2D\u0E32\u0E2B\u0E32\u0E23 1"
+  - <ActionName>k__BackingField: Date
     <PointCost>k__BackingField: 3
     <RelationshipEffect>k__BackingField: 1
     <StressEffect>k__BackingField: 0

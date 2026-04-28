@@ -2,6 +2,7 @@ using UnityEngine;
 using Unity.Netcode;
 using Unity.Collections;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 
 namespace Managers
@@ -60,7 +61,24 @@ namespace Managers
                         Debug.Log("[TurnManager] Clients Ready. Please Start Game.");
                     }
                 };
+                
+                NetworkManager.Singleton.OnClientDisconnectCallback += HandleClientDisconnect;
             }
+        }
+        
+        public override void OnNetworkDespawn()
+        {
+            if (IsServer && NetworkManager.Singleton != null)
+            {
+                NetworkManager.Singleton.OnClientDisconnectCallback -= HandleClientDisconnect;
+            }
+        }
+        
+        // ล้างค่าตัวเองทิ้งเมื่อปิดเกม ป้องกัน Error ข้าม Scene
+        public override void OnDestroy()
+        {
+            if (Instance == this) Instance = null;
+            base.OnDestroy();
         }
         
         /// <summary>
@@ -121,9 +139,7 @@ namespace Managers
             _currentActorIndex.Value = 0;
 
             if (_playerActors != null && _playerActors.Count > 0)
-            {
                 activeActorNetworkId.Value = _playerActors[0].NetworkObjectId;
-            }
         }
         
         /// <summary>
@@ -137,6 +153,8 @@ namespace Managers
             // บังคับปิด Panel และล้าง LocationId
             currentInteractionLocationId.Value = new FixedString64Bytes("");
             isInteractionOpen.Value = false;
+            
+            if (_playerActors.Count <= 1) return;
 
             int nextIndex = (_currentActorIndex.Value + 1) % _playerActors.Count;
             currentRound.Value++;
@@ -147,7 +165,8 @@ namespace Managers
 
                 if (currentCycle.Value > 1 && (currentCycle.Value - 1) % 3 == 0)
                 {
-                    EconomyManager.Instance.ProcessRentCollectionServerRpc();
+                    if(EconomyManager.Instance != null)
+                        EconomyManager.Instance.ProcessRentCollectionServerRpc();
                 }
             }
 
@@ -160,6 +179,62 @@ namespace Managers
             }
         }
         
+        private void HandleClientDisconnect(ulong clientId)
+        {
+            if (!IsServer || !isGameStartedState.Value) return;
+
+            // หาตัวละครของคนที่เพิ่งออก
+            NetworkObject disconnectedActor = null;
+            for (int i = 0; i < _playerActors.Count; i++)
+            {
+                if (_playerActors[i].OwnerClientId == clientId)
+                {
+                    disconnectedActor = _playerActors[i];
+                    break;
+                }
+            }
+
+            if (disconnectedActor != null)
+            {
+                int disconnectedIndex = _playerActors.IndexOf(disconnectedActor);
+                bool wasTheirTurn = (activeActorNetworkId.Value == disconnectedActor.NetworkObjectId);
+
+                // เอาออกจากคิวเดิน
+                _playerActors.RemoveAt(disconnectedIndex);
+                Debug.Log($"[TurnManager] Player {clientId} ออกจากเกม ลบออกจากคิว (เหลือ {_playerActors.Count} คน)");
+
+                // ถ้าเหลือคนเดียว หรือไม่เหลือคนเล่นแล้ว
+                if (_playerActors.Count <= 1)
+                {
+                    Debug.Log("[TurnManager] เหลือผู้เล่นคนเดียว จบเกมอัตโนมัติ!");
+                    isGameStartedState.Value = false;
+                    
+                    if (_playerActors.Count == 1)
+                    {
+                        NotifyEndGameRpc(_playerActors[0].OwnerClientId, true, "ผู้เล่นอื่นออกห้องหมดแล้ว คุณคือผู้ชนะ!");
+                        StartCoroutine(AutoKickToMainMenuCoroutine());
+                    }
+                    return; 
+                }
+                
+                // ถ้าเป็นตาของคนที่เพิ่งออกพอดี ให้จัดคิวข้ามไปคนถัดไปเลย
+                if (wasTheirTurn)
+                {
+                    // ถอย index กลับ 1 ก้าว เพื่อให้ฟังก์ชัน EndTurn ดันไปหาคนถัดไปได้ถูกต้อง
+                    _currentActorIndex.Value = disconnectedIndex - 1; 
+                    if (_currentActorIndex.Value < 0) _currentActorIndex.Value = _playerActors.Count - 1;
+                    
+                    Debug.Log("[TurnManager] ข้ามเทิร์นอัตโนมัติ เนื่องจากคนเดินหลุด");
+                    RequestEndTurnRpc();
+                }
+                else
+                {
+                    // ถ้าคนที่หลุดอยู่คิวก่อนหน้าคนที่กำลังเดินอยู่ ต้องปรับ Index ถอยหลังให้ตรงกับคิวปัจจุบัน
+                    if (disconnectedIndex < _currentActorIndex.Value) _currentActorIndex.Value--;
+                }
+            }
+        }
+        
         /// <summary>
         /// แจ้งผลเกมจบไป Client
         /// </summary>
@@ -167,6 +242,37 @@ namespace Managers
         public void NotifyEndGameRpc(ulong playerId, bool isWin, string reason)
         {
             Debug.Log($"[Game Over] Player {playerId} {(isWin ? "ชนะ" : "แพ้")} - เหตุผล: {reason}");
+            
+            // หมายเหตุ: ตรงจุดนี้ในอนาคตอาจจะต้องเรียก UI "Game Over" ขึ้นมาแสดงผล
+            // แล้วให้ผู้เล่นกดปุ่มเพื่อกลับหน้า Main Menu ด้วยตัวเอง (แทนที่จะเด้งออกทันที)
+        }
+        
+        private IEnumerator AutoKickToMainMenuCoroutine()
+        {
+            // โชว์หน้าเกมค้างไว้ 3 วินาที ให้เห็นข้อความว่าชนะ หรือรู้ตัวว่าเพื่อนหลุดหมดแล้ว
+            yield return new WaitForSeconds(3f);
+            
+            // สั่งล้าง Network เหมือนที่ปุ่ม Exit to Menu ทำ
+            if (NetworkManager.Singleton != null)
+            {
+                NetworkManager.Singleton.Shutdown();
+                yield return new WaitWhile(() => NetworkManager.Singleton != null && NetworkManager.Singleton.ShutdownInProgress);
+                
+                if (NetworkManager.Singleton != null)
+                {
+                    Destroy(NetworkManager.Singleton.gameObject);
+                }
+            }
+
+            // ทำลาย Manager ทิ้ง
+            GameObject gs = GameObject.Find("GameSystem");
+            if (gs != null) Destroy(gs);
+
+            GameObject lnm = GameObject.Find("LobbyNetworkManager");
+            if (lnm != null) Destroy(lnm);
+
+            // โหลดกลับหน้าแรก
+            UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
         }
         #endregion
     }

@@ -24,8 +24,8 @@ namespace Managers
         public NetworkVariable<int> MaxPlayers = new NetworkVariable<int>(2);
         public NetworkVariable<int> CountdownTimer = new NetworkVariable<int>(-1); 
         
-        public NetworkList<ulong> AvatarSelections;
-        public NetworkList<ulong> ConnectedPlayers;
+        public NetworkList<ulong> AvatarSelections = new NetworkList<ulong>();
+        public NetworkList<ulong> ConnectedPlayers = new NetworkList<ulong>();
 
         private Coroutine _countdownCoroutine;
 
@@ -41,18 +41,39 @@ namespace Managers
                 Destroy(gameObject);
                 return;
             }
-
-            // สร้าง List รอไว้ตั้งแต่ Awake ป้องกัน Error NullReference
-            AvatarSelections = new NetworkList<ulong>();
-            ConnectedPlayers = new NetworkList<ulong>();
+        }
+        
+        // ล้างค่าทั้งหมดก่อนตาย ป้องกัน NullReferenceException ในตาต่อไป
+        public override void OnDestroy()
+        {
+            if (Instance == this)
+            {
+                Instance = null;
+            }
+            
+            // ล้างข้อมูล List ก่อนตาย เพื่อความชัวร์ว่าไม่ค้างใน Network
+            if (IsServer && NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
+            {
+                ConnectedPlayers.Clear();
+                AvatarSelections.Clear();
+            }
+            
+            base.OnDestroy();
         }
 
         private async void Start()
         {
-            await UnityServices.InitializeAsync();
-            if (!AuthenticationService.Instance.IsSignedIn)
+            try 
             {
-                await AuthenticationService.Instance.SignInAnonymouslyAsync();
+                await UnityServices.InitializeAsync();
+                if (!AuthenticationService.Instance.IsSignedIn)
+                {
+                    await AuthenticationService.Instance.SignInAnonymouslyAsync();
+                }
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[Lobby] เริ่มระบบ Unity Services ไม่สำเร็จ: {e.Message}");
             }
         }
 

@@ -16,7 +16,7 @@ MonoBehaviour:
   <LocationName>k__BackingField: Museum
   <Description>k__BackingField: 
   <AvailableActions>k__BackingField:
-  - <ActionName>k__BackingField: "\u0E40\u0E17\u0E35\u0E48\u0E22\u0E27 1"
+  - <ActionName>k__BackingField: Date
     <PointCost>k__BackingField: 4
     <RelationshipEffect>k__BackingField: 0
     <StressEffect>k__BackingField: 0

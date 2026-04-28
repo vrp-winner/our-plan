@@ -147,7 +147,7 @@ namespace UI
                 bool isMyTurn = (netObj.OwnerClientId == NetworkManager.Singleton.LocalClientId);
 
                 locationNameText.text = loc.Config.LocationName;
-                descriptionText.text = isMyTurn ? loc.Config.Description : "ผู้เล่นอื่นกำลังตัดสินใจ...";
+                descriptionText.text = isMyTurn ? loc.Config.Description : "Waiting for other player...";
 
                 foreach (Transform child in actionButtonsContainer) Destroy(child.gameObject);
 

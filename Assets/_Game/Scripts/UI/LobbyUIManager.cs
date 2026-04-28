@@ -96,8 +96,12 @@ namespace UI
 
             SwitchPanel(titlePanel);
 
-            NetworkManager.Singleton.OnClientConnectedCallback += OnNetworkConnected;
-            NetworkManager.Singleton.OnClientDisconnectCallback += OnNetworkDisconnected;
+            // เช็คก่อนว่ามี NetworkManager ให้ใช้หรือยัง
+            if (NetworkManager.Singleton != null)
+            {
+                NetworkManager.Singleton.OnClientConnectedCallback += OnNetworkConnected;
+                NetworkManager.Singleton.OnClientDisconnectCallback += OnNetworkDisconnected;
+            }
         }
 
         private void OnDestroy()
@@ -138,30 +142,59 @@ namespace UI
                 Debug.Log("Please select number of players first!");
                 return; 
             }
+            
+            // ป้องกัน NullReference ตอนกดสร้างห้องรัวๆ หรือหลังจากสลับ Scene
+            if (LobbyNetworkManager.Instance == null)
+            {
+                Debug.LogError("[LobbyUIManager] ค้นหา LobbyNetworkManager ไม่เจอ! กรุณาตรวจสอบว่ามีอยู่ใน Scene หรือไม่");
+                return;
+            }
 
             createBtn.interactable = false; 
-            bool success = await LobbyNetworkManager.Instance.StartHostRelay(_selectedMaxPlayers);
             
-            if (!success) 
+            try 
+            {
+                bool success = await LobbyNetworkManager.Instance.StartHostRelay(_selectedMaxPlayers);
+                if (!success) 
+                {
+                    createBtn.interactable = true;
+                    Debug.LogError("สร้างห้องไม่สำเร็จ");
+                }
+            }
+            catch (System.Exception e)
             {
                 createBtn.interactable = true;
-                Debug.LogError("สร้างห้องไม่สำเร็จ");
+                Debug.LogError($"[LobbyUIManager] เกิดข้อผิดพลาดระหว่างสร้างห้อง: {e.Message}");
             }
         }
 
         private async void OnJoinGameClicked()
         {
             if (string.IsNullOrEmpty(joinCodeInput.text)) return;
+            
+            // ป้องกัน NullReference เหมือนกัน
+            if (LobbyNetworkManager.Instance == null)
+            {
+                Debug.LogError("[LobbyUIManager] ค้นหา LobbyNetworkManager ไม่เจอ!");
+                return;
+            }
 
             joinBtn.interactable = false;
-
             string upperCaseCode = joinCodeInput.text.ToUpper();
-            bool success = await LobbyNetworkManager.Instance.StartClientRelay(upperCaseCode);
             
-            if (!success) 
+            try
+            {
+                bool success = await LobbyNetworkManager.Instance.StartClientRelay(upperCaseCode);
+                if (!success) 
+                {
+                    joinBtn.interactable = true;
+                    Debug.LogError("Join ไม่สำเร็จ (Code ผิด หรือ ห้องเต็ม)");
+                }
+            }
+            catch (System.Exception e)
             {
                 joinBtn.interactable = true;
-                Debug.LogError("Join ไม่สำเร็จ (Code ผิด หรือ ห้องเต็ม)");
+                Debug.LogError($"[LobbyUIManager] เกิดข้อผิดพลาดระหว่างเข้าร่วมห้อง: {e.Message}");
             }
         }
 
@@ -185,7 +218,7 @@ namespace UI
         #region Lobby Reactive UI (อัปเดตหน้าจอตาม Server)
         private void OnNetworkConnected(ulong clientId)
         {
-            if (clientId == NetworkManager.Singleton.LocalClientId)
+            if (NetworkManager.Singleton != null && clientId == NetworkManager.Singleton.LocalClientId)
             {
                 SwitchPanel(lobbyPanel);
                 if (LobbyNetworkManager.Instance != null)
@@ -200,11 +233,12 @@ namespace UI
 
         private void OnNetworkDisconnected(ulong clientId)
         {
-            if (clientId == NetworkManager.Singleton.LocalClientId)
+            if (NetworkManager.Singleton != null && clientId == NetworkManager.Singleton.LocalClientId)
             {
                 UnsubscribeLobbyEvents();
                 SwitchPanel(connectionPanel); 
-                joinBtn.interactable = true; 
+                if (joinBtn != null) joinBtn.interactable = true; 
+                if (createBtn != null) createBtn.interactable = true;
             }
         }
 
