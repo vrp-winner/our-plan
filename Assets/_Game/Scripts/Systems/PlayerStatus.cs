@@ -3,6 +3,14 @@ using Unity.Netcode;
 
 namespace Systems
 {
+    public enum GameObjective
+    {
+        GetMarried,
+        BuyHouseAndCar,
+        RetireWealthy,
+        DateEverywhere
+    }
+
     /// <summary>
     /// เก็บสถานะของผู้เล่น (Stats + Team)
     /// แก้ไขค่าได้จาก Server เท่านั้น
@@ -17,7 +25,13 @@ namespace Systems
         [Header("Stats(Private)")]
         public readonly NetworkVariable<int> Stress = new NetworkVariable<int>(10);
         public readonly NetworkVariable<float> PersonalMoney = new NetworkVariable<float>(500f);
-        
+       
+        public NetworkList<Unity.Collections.FixedString32Bytes> VisitedDatingSpots = new NetworkList<Unity.Collections.FixedString32Bytes>();
+
+        public NetworkVariable<bool> IsMarried = new NetworkVariable<bool>(false);
+        public NetworkVariable<bool> HasHouse = new NetworkVariable<bool>(false);
+        public NetworkVariable<bool> HasCar = new NetworkVariable<bool>(false);
+
         [Header("Stats(Shared by team)")]
         public readonly NetworkVariable<int> Relationship = new NetworkVariable<int>(35);
 

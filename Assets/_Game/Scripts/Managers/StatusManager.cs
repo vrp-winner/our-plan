@@ -72,6 +72,40 @@ namespace Managers
             CheckFailConditions(status);
         }
 
+
+        public void CheckWinConditions(PlayerStatus status)
+        {
+            if (!IsServer) return;
+
+            if (status.Relationship.Value < 80) return;
+
+            bool isObjectiveCompleted = false;
+
+            switch (TurnManager.Instance.currentObjective.Value)
+            {
+                case GameObjective.GetMarried:
+                    isObjectiveCompleted = status.IsMarried.Value;
+                    break;
+
+                case GameObjective.BuyHouseAndCar:
+                    isObjectiveCompleted = status.HasHouse.Value && status.HasCar.Value;
+                    break;
+
+                case GameObjective.RetireWealthy:
+                    isObjectiveCompleted = EconomyManager.Instance.JointMoney.Value >= 800000f;
+                    break;
+
+                case GameObjective.DateEverywhere:
+                    isObjectiveCompleted = status.VisitedDatingSpots.Count >= 5;
+                    break;
+            }
+
+            if (isObjectiveCompleted)
+            {
+                TurnManager.Instance.NotifyEndGameRpc(status.OwnerClientId, true, $"บรรลุเป้าหมาย: {TurnManager.Instance.currentObjective.Value} รักษาความสัมพันธ์ได้");
+            }
+        }
+
         /// <summary>
         /// ตรวจสอบเงื่อนไข Mission Failed
         /// </summary>
