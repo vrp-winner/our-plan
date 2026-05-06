@@ -70,8 +70,8 @@ namespace Managers
                 // STEP 4: อัปเดต Status และ Avatar
                 if (playerInstance.TryGetComponent(out Systems.PlayerStatus status))
                 {
-                    status.teamId.Value = 0;
-                    status.memberIndex.Value = i;
+                    status.teamId.Value = i;
+                    status.memberIndex.Value = 0;
 
                     if (_playerSelectedAvatars.TryGetValue(ownerId, out int avatarIdx))
                     {
