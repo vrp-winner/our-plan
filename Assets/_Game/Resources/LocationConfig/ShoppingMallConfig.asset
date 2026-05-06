@@ -16,10 +16,59 @@ MonoBehaviour:
   <LocationName>k__BackingField: Shopping Mall
   <Description>k__BackingField: 
   <AvailableActions>k__BackingField:
-  - <ActionName>k__BackingField: Buy
+  - <ActionName>k__BackingField: Date
     <PointCost>k__BackingField: 4
-    <RelationshipEffect>k__BackingField: 0
-    <StressEffect>k__BackingField: 0
-    <MoneyEffect>k__BackingField: 0
+    <RelationshipEffect>k__BackingField: 10
+    <StressEffect>k__BackingField: -25
+    <MoneyEffect>k__BackingField: -90000
     <IsConsumeAllPoints>k__BackingField: 0
     <EndsTurn>k__BackingField: 0
+    <IsOncePerTurn>k__BackingField: 1
+  - <ActionName>k__BackingField: Buy (Car)
+    <PointCost>k__BackingField: 2
+    <RelationshipEffect>k__BackingField: 0
+    <StressEffect>k__BackingField: 0
+    <MoneyEffect>k__BackingField: -95000
+    <IsConsumeAllPoints>k__BackingField: 0
+    <EndsTurn>k__BackingField: 0
+    <IsOncePerTurn>k__BackingField: 0
+  - <ActionName>k__BackingField: Buy (Bouquet)
+    <PointCost>k__BackingField: 2
+    <RelationshipEffect>k__BackingField: 5
+    <StressEffect>k__BackingField: 0
+    <MoneyEffect>k__BackingField: -5000
+    <IsConsumeAllPoints>k__BackingField: 0
+    <EndsTurn>k__BackingField: 0
+    <IsOncePerTurn>k__BackingField: 0
+  - <ActionName>k__BackingField: Buy (Doll)
+    <PointCost>k__BackingField: 2
+    <RelationshipEffect>k__BackingField: 10
+    <StressEffect>k__BackingField: 0
+    <MoneyEffect>k__BackingField: -10000
+    <IsConsumeAllPoints>k__BackingField: 0
+    <EndsTurn>k__BackingField: 0
+    <IsOncePerTurn>k__BackingField: 0
+  - <ActionName>k__BackingField: Buy (Purse)
+    <PointCost>k__BackingField: 2
+    <RelationshipEffect>k__BackingField: 15
+    <StressEffect>k__BackingField: 0
+    <MoneyEffect>k__BackingField: -15000
+    <IsConsumeAllPoints>k__BackingField: 0
+    <EndsTurn>k__BackingField: 0
+    <IsOncePerTurn>k__BackingField: 0
+  - <ActionName>k__BackingField: Buy (Ring)
+    <PointCost>k__BackingField: 2
+    <RelationshipEffect>k__BackingField: 0
+    <StressEffect>k__BackingField: 0
+    <MoneyEffect>k__BackingField: -100000
+    <IsConsumeAllPoints>k__BackingField: 0
+    <EndsTurn>k__BackingField: 0
+    <IsOncePerTurn>k__BackingField: 0
+  - <ActionName>k__BackingField: Buy (Medicine)
+    <PointCost>k__BackingField: 2
+    <RelationshipEffect>k__BackingField: 0
+    <StressEffect>k__BackingField: 0
+    <MoneyEffect>k__BackingField: -12000
+    <IsConsumeAllPoints>k__BackingField: 0
+    <EndsTurn>k__BackingField: 0
+    <IsOncePerTurn>k__BackingField: 0

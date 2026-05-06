@@ -25,11 +25,17 @@ namespace Systems
         
         // Location ปัจจุบันที่ผู้เล่นยืนอยู่
         public string CurrentLocationId { get; private set; } = string.Empty;
-        
         public int PointsRemaining => _pointsRemaining.Value;
+        
+        private PlayerActionHandler _actionHandler;
         #endregion
 
         #region Lifecycle
+        private void Awake()
+        {
+            _actionHandler = GetComponent<PlayerActionHandler>();
+        }
+        
         public override void OnNetworkSpawn()
         {
             if (IsServer)
@@ -37,8 +43,7 @@ namespace Systems
                 TurnManager.Instance.activeActorNetworkId.OnValueChanged += HandleActiveActorChanged;
                 if (TurnManager.Instance.activeActorNetworkId.Value == this.NetworkObjectId)
                 {
-                    _pointsRemaining.Value = gameConfig.MaxPointsPerTurn;
-                    TurnManager.Instance.currentTime.Value = _pointsRemaining.Value * gameConfig.SecondsPerPoint;
+                    ResetTurnData();
                 }
             }
         }
@@ -57,10 +62,23 @@ namespace Systems
         {
             if (this.NetworkObjectId == newId && IsServer)
             {
-                _pointsRemaining.Value = gameConfig.MaxPointsPerTurn;
-                TurnManager.Instance.currentTime.Value = _pointsRemaining.Value * gameConfig.SecondsPerPoint;
-                
-                _lastInteractedLocation = string.Empty;
+                ResetTurnData();
+            }
+        }
+        
+        private void ResetTurnData()
+        {
+            // รีเซ็ต Point
+            _pointsRemaining.Value = gameConfig.MaxPointsPerTurn;
+            TurnManager.Instance.currentTime.Value = _pointsRemaining.Value * gameConfig.SecondsPerPoint;
+            
+            // รีเซ็ตการล็อกสถานที่
+            _lastInteractedLocation = string.Empty;
+
+            // รีเซ็ตความจำว่าเคยกดปุ่ม Once Per Turn อะไรไปบ้าง
+            if (_actionHandler != null)
+            {
+                _actionHandler.UsedOncePerTurnActions.Clear();
             }
         }
         #endregion
@@ -119,18 +137,10 @@ namespace Systems
             // อัปเดตตำแหน่งปัจจุบัน
             CurrentLocationId = locationId;
 
-            // เปิด UI ถ้ายังไม่เคยทำ Action ที่นี่
-            if (_lastInteractedLocation != locationId)
-            {
-                TurnManager.Instance.currentInteractionLocationId.Value = new FixedString64Bytes(locationId);
-                TurnManager.Instance.isInteractionOpen.Value = true;
-            }
-#if UNITY_EDITOR
-            else
-            {
-                Debug.Log($"[UI Blocked] {locationId} already interacted");
-            }
-#endif
+            // ปรับให้เปิด UI เสมอ ไม่ว่าเคยกด Action ไปแล้วหรือยัง
+            // เพื่อให้ผู้เล่นซื้อของต่อ หรือกดปุ่มอื่นๆ ได้ จนกว่าจะจบเทิร์น
+            TurnManager.Instance.currentInteractionLocationId.Value = new FixedString64Bytes(locationId);
+            TurnManager.Instance.isInteractionOpen.Value = true;
         }
         
         public void NotifyLocationExit()

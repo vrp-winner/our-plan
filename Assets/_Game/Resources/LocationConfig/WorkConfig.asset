@@ -16,10 +16,11 @@ MonoBehaviour:
   <LocationName>k__BackingField: Work
   <Description>k__BackingField: Earn Money!
   <AvailableActions>k__BackingField:
-  - <ActionName>k__BackingField: Work Hard
-    <PointCost>k__BackingField: 10
+  - <ActionName>k__BackingField: Work
+    <PointCost>k__BackingField: 5
     <RelationshipEffect>k__BackingField: 0
-    <StressEffect>k__BackingField: 0
-    <MoneyEffect>k__BackingField: 0
+    <StressEffect>k__BackingField: 5
+    <MoneyEffect>k__BackingField: 10000
     <IsConsumeAllPoints>k__BackingField: 0
     <EndsTurn>k__BackingField: 0
+    <IsOncePerTurn>k__BackingField: 0

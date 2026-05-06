@@ -1,5 +1,6 @@
 using UnityEngine;
 using Unity.Netcode;
+using Unity.Collections;
 using Configs;
 using Managers;
 
@@ -14,11 +15,19 @@ namespace Systems
     {
         private PlayerPointSystem _pointSystem;
         private PlayerStatus _status;
+        
+        // เก็บ Index ของ Action ที่ถูกกดไปแล้วในเทิร์นนี้ และเป็นแบบ Once Per Turn
+        // จำชื่อสถานที่ + ตัวเลข (เช่น "LOC_Beach_0") ป้องกัน Index ชนกัน
+        public NetworkList<FixedString32Bytes> UsedOncePerTurnActions;
+        
+        // ประเภทของ Action สำหรับธนาคาร
+        public enum BankActionType { Deposit, Withdraw, PayRent, BuyHouse }
 
         private void Awake()
         {
             _pointSystem = GetComponent<PlayerPointSystem>();
             _status = GetComponent<PlayerStatus>();
+            UsedOncePerTurnActions = new NetworkList<FixedString32Bytes>();
         }
 
         /// <summary>
@@ -28,7 +37,6 @@ namespace Systems
         public void RequestExecuteLocationActionServerRpc(string locationId, int actionIndex, RpcParams rpcParams = default)
         {
             if (!IsServer) return;
-
             if (rpcParams.Receive.SenderClientId != OwnerClientId) return;
             if (TurnManager.Instance.activeActorNetworkId.Value != this.NetworkObjectId) return;
             if (_pointSystem.CurrentLocationId != locationId) return;
@@ -38,8 +46,20 @@ namespace Systems
             if (actionIndex < 0 || actionIndex >= loc.Config.AvailableActions.Count) return;
 
             LocationAction action = loc.Config.AvailableActions[actionIndex];
+            FixedString32Bytes actionKey = new FixedString32Bytes($"{locationId}_{actionIndex}");
+            
+            // เช็ค Once Per Turn ด้วย Key ใหม่
+            if (action.IsOncePerTurn && UsedOncePerTurnActions.Contains(actionKey)) return;
 
+            // เช็คว่ามี Point พอไหม
             if (!action.IsConsumeAllPoints && !_pointSystem.HasEnoughPoints(action.PointCost)) return;
+            
+            // เช็คว่าถ้า Effect เงินติดลบ (แปลว่าต้องซื้อ/จ่าย) ผู้เล่นมีเงินพอไหม?
+            if (action.MoneyEffect < 0 && _status.PersonalMoney.Value < Mathf.Abs(action.MoneyEffect))
+            {
+                Debug.LogWarning("[Action] เงินส่วนตัวไม่พอสำหรับการทำ Action นี้!");
+                return;
+            }
 
             // 1. หักแต้ม
             if (action.IsConsumeAllPoints) _pointSystem.ConsumeAllPoints();
@@ -48,16 +68,76 @@ namespace Systems
             // 2. Apply สถานะตัวละคร
             _status.ApplyStats_ServerOnly(action.RelationshipEffect, action.StressEffect, action.MoneyEffect);
 
-            // [TASK] STEP 3: มาร์คสถานะสถานที่นี้ว่าได้ทำ Action ไปแล้ว ป้องกัน UI เด้งซ้ำในเทิร์นเดิม
+            // 3. มาร์คสถานะสถานที่นี้ว่าได้ทำ Action ไปแล้ว เพื่อให้ UI รู้
             _pointSystem.MarkLocationAsInteracted(locationId);
+            
+            // ถ้า Action นี้เป็นแบบ กดได้ครั้งเดียวต่อตา ให้บันทึกไว้ใน List
+            if (action.IsOncePerTurn) UsedOncePerTurnActions.Add(actionKey);
 
-            // 4. บังคับปิด Interaction UI ทันที
-            TurnManager.Instance.isInteractionOpen.Value = false;
-
-            // 5. เช็คเงื่อนไขบังคับจบเทิร์น
+            // 4. เช็คเงื่อนไขบังคับจบเทิร์น
             if (action.EndsTurn && _pointSystem.PointsRemaining > 0)
             {
                 TurnManager.Instance.RequestEndTurnRpc();
+            }
+        }
+        
+        // คำสั่งแยกเฉพาะกิจสำหรับ Bank
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+        public void RequestBankActionServerRpc(BankActionType actionType, float amount, RpcParams rpcParams = default)
+        {
+            if (!IsServer) return;
+            if (rpcParams.Receive.SenderClientId != OwnerClientId) return;
+            if (TurnManager.Instance.activeActorNetworkId.Value != this.NetworkObjectId) return;
+            if (_pointSystem.CurrentLocationId != "LOC_Bank") return;
+
+            int pointCost = 2; // กำหนดให้ทุก Action ในธนาคารใช้ 2 Point (12 วินาที)
+            if (!_pointSystem.HasEnoughPoints(pointCost)) return;
+
+            bool success = false;
+
+            switch (actionType)
+            {
+                case BankActionType.Deposit:
+                    if (_status.PersonalMoney.Value >= amount)
+                    {
+                        _status.PersonalMoney.Value -= amount;
+                        EconomyManager.Instance.JointMoney.Value += amount;
+                        success = true;
+                    }
+                    break;
+
+                case BankActionType.Withdraw:
+                    if (EconomyManager.Instance.JointMoney.Value >= amount)
+                    {
+                        EconomyManager.Instance.JointMoney.Value -= amount;
+                        _status.PersonalMoney.Value += amount;
+                        success = true;
+                    }
+                    break;
+
+                case BankActionType.PayRent:
+                    if (EconomyManager.Instance.RentLevel.Value > 0 && EconomyManager.Instance.JointMoney.Value >= EconomyManager.Instance.GetCurrentRentPrice())
+                    {
+                        EconomyManager.Instance.ExecutePayRent_ServerOnly();
+                        success = true;
+                    }
+                    break;
+
+                case BankActionType.BuyHouse:
+                    if (!EconomyManager.Instance.IsHouseBought.Value && EconomyManager.Instance.JointMoney.Value >= 500000f)
+                    {
+                        EconomyManager.Instance.JointMoney.Value -= 500000f;
+                        EconomyManager.Instance.IsHouseBought.Value = true; 
+                        success = true;
+                        TurnManager.Instance.NotifyEndGameRpc(OwnerClientId, true, "ร่วมกันซื้อบ้านเป้าหมายสำเร็จ! (Win)");
+                    }
+                    break;
+            }
+
+            if (success)
+            {
+                _pointSystem.ConsumePoints(pointCost);
+                _pointSystem.MarkLocationAsInteracted("LOC_Bank");
             }
         }
 

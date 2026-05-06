@@ -17,7 +17,7 @@ MonoBehaviour:
   <Description>k__BackingField: Rest
   <AvailableActions>k__BackingField:
   - <ActionName>k__BackingField: Sleep
-    <PointCost>k__BackingField: 10
+    <PointCost>k__BackingField: 20
     <RelationshipEffect>k__BackingField: 0
     <StressEffect>k__BackingField: -20
     <MoneyEffect>k__BackingField: 0

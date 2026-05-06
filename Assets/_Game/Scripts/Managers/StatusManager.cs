@@ -10,29 +10,30 @@ namespace Managers
     public class StatusManager : SingletonNetwork<StatusManager>
     {
         /// <summary>
-        /// ลงโทษผู้เล่นทุกคนเมื่อไม่มีเงินจ่ายค่าเช่า
+        /// ลงโทษผู้เล่นทุกคนตามจำนวนเดือนที่ค้างค่าเช่า
         /// </summary>
-        /// <param name="unpaidLevel">ระดับความรุนแรงของการค้างค่าเช่า</param>
-        public void ApplyGlobalRentPenalty(int unpaidLevel)
+        public void ApplyGlobalRentPenalty(int overdueMonths)
         {
             // STEP 1: Guard ป้องกัน Client เรียกใช้งาน (Server Authority 100%)
             if (!IsServer) return;
 
             // STEP 2: คำนวณค่า Penalty
-            int penalty = unpaidLevel switch
+            int statPenalty = overdueMonths switch
             {
                 1 => 15,
                 2 => 30,
                 3 => 50,
                 _ => 0
             };
+            
+            if (statPenalty == 0) return;
 
             // STEP 3: บังคับใช้ Penalty กับผู้เล่นทุกคนในระบบ
             var allPlayers = GameObject.FindObjectsByType<PlayerStatus>(FindObjectsSortMode.None);
             foreach (var status in allPlayers)
             {
-                // เรียก Server Method โดยตรง (ไม่ใช่ RPC แล้ว)
-                status.ApplyStats_ServerOnly(-penalty, penalty, 0);
+                // ความสัมพันธ์ลด (-) ความเครียดเพิ่ม (+)
+                status.ApplyStats_ServerOnly(-statPenalty, statPenalty, 0);
             }
         }
 

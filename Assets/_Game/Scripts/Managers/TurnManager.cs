@@ -23,7 +23,7 @@ namespace Managers
 
         public NetworkVariable<ulong> activeActorNetworkId = new NetworkVariable<ulong>(0);
         public NetworkVariable<bool> isGameStartedState = new NetworkVariable<bool>(false);
-        public NetworkVariable<int> currentRound = new NetworkVariable<int>(0);
+        public NetworkVariable<int> currentRound = new NetworkVariable<int>(1);
         public NetworkVariable<int> currentCycle = new NetworkVariable<int>(1);
         private readonly NetworkVariable<int> _currentActorIndex = new NetworkVariable<int>(0);
 
@@ -157,16 +157,18 @@ namespace Managers
             if (_playerActors.Count <= 1) return;
 
             int nextIndex = (_currentActorIndex.Value + 1) % _playerActors.Count;
-            currentRound.Value++;
-
+            
+            // Round จะเพิ่มขึ้น ก็ต่อเมื่อวนกลับมาที่ผู้เล่นคนแรกเท่านั้น
             if (nextIndex == 0)
             {
-                currentCycle.Value++;
+                currentRound.Value++; 
 
-                if (currentCycle.Value > 1 && (currentCycle.Value - 1) % 3 == 0)
+                // ทุกๆ 4 Rounds (เช่น จบ 4 ขึ้น 5, จบ 8 ขึ้น 9) ให้เปลี่ยนเดือน และเก็บค่าเช่า
+                if ((currentRound.Value - 1) % 4 == 0)
                 {
+                    currentCycle.Value++; // ขึ้นเดือนใหม่
                     if(EconomyManager.Instance != null)
-                        EconomyManager.Instance.ProcessRentCollectionServerRpc();
+                        EconomyManager.Instance.ApplyRentChargeServerRpc();
                 }
             }
 
@@ -257,11 +259,7 @@ namespace Managers
             {
                 NetworkManager.Singleton.Shutdown();
                 yield return new WaitWhile(() => NetworkManager.Singleton != null && NetworkManager.Singleton.ShutdownInProgress);
-                
-                if (NetworkManager.Singleton != null)
-                {
-                    Destroy(NetworkManager.Singleton.gameObject);
-                }
+                if (NetworkManager.Singleton != null) Destroy(NetworkManager.Singleton.gameObject);
             }
 
             // ทำลาย Manager ทิ้ง

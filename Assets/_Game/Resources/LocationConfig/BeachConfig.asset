@@ -10,16 +10,17 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a56ed523c3bf1634c97a00a58a9ab376, type: 3}
-  m_Name: SeaConfig
+  m_Name: BeachConfig
   m_EditorClassIdentifier: Assembly-CSharp::Configs.LocationConfig
-  <LocationId>k__BackingField: LOC_Sea
-  <LocationName>k__BackingField: Sea
+  <LocationId>k__BackingField: LOC_Beach
+  <LocationName>k__BackingField: Beach
   <Description>k__BackingField: 
   <AvailableActions>k__BackingField:
   - <ActionName>k__BackingField: Date
     <PointCost>k__BackingField: 6
-    <RelationshipEffect>k__BackingField: 0
-    <StressEffect>k__BackingField: 0
-    <MoneyEffect>k__BackingField: 0
+    <RelationshipEffect>k__BackingField: 20
+    <StressEffect>k__BackingField: -15
+    <MoneyEffect>k__BackingField: -90000
     <IsConsumeAllPoints>k__BackingField: 0
     <EndsTurn>k__BackingField: 0
+    <IsOncePerTurn>k__BackingField: 1

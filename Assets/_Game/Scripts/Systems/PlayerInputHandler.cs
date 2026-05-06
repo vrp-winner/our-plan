@@ -55,6 +55,12 @@ namespace Systems
 
             // STEP 3: ป้องกันการกดซ้อนระหว่างเดิน
             if (_playerMovement.IsMoving.Value) return;
+            
+            // STEP 3.5: ถ้า Interaction Panel เปิดอยู่ ห้ามขยับตัวเด็ดขาด
+            if (TurnManager.Instance != null && TurnManager.Instance.isInteractionOpen.Value)
+            {
+                return; 
+            }
 
             // STEP 4: ตรวจจับคลิก
             if (Mouse.current.leftButton.wasPressedThisFrame)

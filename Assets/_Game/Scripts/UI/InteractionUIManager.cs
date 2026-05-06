@@ -1,44 +1,53 @@
 using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
-using Configs;
 using Systems;
 using Managers;
 using Unity.Collections;
 using Unity.Netcode;
+using System.Collections.Generic;
 
 namespace UI
 {
+    [System.Serializable]
+    public struct LocationPanelMapping
+    {
+        [Tooltip("ใส่ LocationId ให้ตรงกับ Config เช่น LOC_Beach, LOC_ShoppingMall")]
+        public string LocationId;
+        [Tooltip("ลาก GameObject ของหน้าต่างสถานที่นั้นๆ มาใส่")]
+        public GameObject PanelObject;
+    }
+    
     /// <summary>
-    /// ตัวจัดการ UI สำหรับการ Interact กับสถานที่
-    /// ใช้ Reactive + Initial Sync Pattern เพื่อรองรับ UI ถูกเปิด/ปิดหลายรอบ (Subscribe -> Clear -> Sync)
+    /// ตัวจัดการ UI แบบใหม่ (Sub-Panel System + Player Stats Sidebar)
     /// </summary>
     public class InteractionUIManager : MonoBehaviour
     {
-        #region UI References
         public static InteractionUIManager Instance { get; private set; }
 
-        [Header("UI References")]
+        [Header("Main Root")]
         [SerializeField] private GameObject panelRoot;
-        [SerializeField] private TextMeshProUGUI locationNameText;
-        [SerializeField] private TextMeshProUGUI descriptionText;
-        [SerializeField] private Transform actionButtonsContainer;
-        [SerializeField] private Button actionButtonPrefab;
-        [SerializeField] private Button closeButton;
+
+        [Header("Location Sub-Panels")]
+        [SerializeField] private List<LocationPanelMapping> locationPanels;
+
+        [Header("Player Stats Sidebar")]
+        [SerializeField] private GameObject sidebarRoot;
+        [SerializeField] private Image avatarImage;
+        [SerializeField] private TextMeshProUGUI relationshipText;
+        [SerializeField] private TextMeshProUGUI stressText;
+        [SerializeField] private TextMeshProUGUI moneyText;
+        [SerializeField] private Sprite[] avatarSprites;
 
         private PlayerActionHandler _currentActionHandler;
+        private PlayerStatus _currentStatus;
         private string _lastBoundLocationId = "";
-        private bool _forceRefresh = false; 
-        #endregion
         
         #region Lifecycle
         private void Awake()
         {
             if (Instance == null) Instance = this;
             else Destroy(gameObject);
-            
-            // ผูก Close Button Listener ครั้งเดียว
-            closeButton.onClick.AddListener(OnCloseButtonClicked);
             
             panelRoot.SetActive(false);
         }
@@ -47,15 +56,10 @@ namespace UI
         {
             if (TurnManager.Instance != null)
             {
-                // 1. Subscribe Event
+                // Subscribe Event
                 TurnManager.Instance.currentInteractionLocationId.OnValueChanged += OnLocationChanged;
                 TurnManager.Instance.isInteractionOpen.OnValueChanged += OnInteractionStateChanged;
-                
-                // 2. Clear UI
-                ClearUI();
-                
-                // 3. Initial Sync
-                OnInteractionStateChanged(false, TurnManager.Instance.isInteractionOpen.Value);
+                TurnManager.Instance.activeActorNetworkId.OnValueChanged += OnActiveActorChanged;
             }
         }
 
@@ -66,138 +70,133 @@ namespace UI
                 // Unsubscribe Event
                 TurnManager.Instance.currentInteractionLocationId.OnValueChanged -= OnLocationChanged;
                 TurnManager.Instance.isInteractionOpen.OnValueChanged -= OnInteractionStateChanged;
+                TurnManager.Instance.activeActorNetworkId.OnValueChanged -= OnActiveActorChanged;
             }
+            UnbindPlayerStatus();
         }
         #endregion
-
-        #region Presentation Logic
+        
+        #region State Changes
         private void OnLocationChanged(FixedString64Bytes oldVal, FixedString64Bytes newVal)
         {
-            _forceRefresh = true; 
-
-            if (TurnManager.Instance.isInteractionOpen.Value)
-            {
-                TryBindUI();
-            }
+            if (TurnManager.Instance.isInteractionOpen.Value) TryBindUI();
         }
 
         private void OnInteractionStateChanged(bool oldVal, bool newVal)
         {
             panelRoot.SetActive(newVal);
-
-            if (newVal)
-            {
-                TryBindUI(); 
-            }
-            else
-            {
-                ClearUI();   
-            }
+            if (newVal) TryBindUI();
+            else ClearUI();
         }
+        
+        private void OnActiveActorChanged(ulong oldId, ulong newId)
+        {
+            if (panelRoot.activeInHierarchy) TryBindUI();
+        }
+        #endregion
 
+        #region Presentation Logic
         private void TryBindUI()
         {
             string locId = TurnManager.Instance.currentInteractionLocationId.Value.ToString();
-
-            if (string.IsNullOrEmpty(locId)) return; 
-
-            // Skip bind หากเป็น Location เดิมและไม่บังคับ refresh
-            if (!_forceRefresh && _lastBoundLocationId == locId) return;
-
-            _forceRefresh = false;
-            _lastBoundLocationId = locId; 
-            BindUIData(locId);
-        }
-
-        private void ClearUI()
-        {
-            _currentActionHandler = null;
-            _lastBoundLocationId = ""; 
-            _forceRefresh = false;
-
-            locationNameText.text = "";
-            descriptionText.text = "";
-
-            foreach (Transform child in actionButtonsContainer)
-            {
-                Destroy(child.gameObject);
-            }
-        }
-
-        private void BindUIData(string serverLocationId)
-        {
             ulong activeId = TurnManager.Instance.activeActorNetworkId.Value;
-            if (activeId == 0) return;
+            
+            if (string.IsNullOrEmpty(locId) || activeId == 0) return;
+            
+            _lastBoundLocationId = locId;
+            
+            // 1. เปิด Sub-Panel ให้ถูกสถานที่
+            foreach (var mapping in locationPanels)
+            {
+                if (mapping.PanelObject != null)
+                {
+                    mapping.PanelObject.SetActive(mapping.LocationId == locId);
+                }
+            }
 
-            var loc = LocationRegistry.GetLocation(serverLocationId);
-            if (loc == null) return;
-
+            // 2. ดึงข้อมูล Player และ Update Sidebar
             if (NetworkManager.Singleton != null && 
                 NetworkManager.Singleton.SpawnManager != null && 
                 NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(activeId, out var netObj))
             {
                 _currentActionHandler = netObj.GetComponent<PlayerActionHandler>();
                 
-                if (_currentActionHandler == null)
+                UnbindPlayerStatus(); // ล้างของเก่าก่อน
+                _currentStatus = netObj.GetComponent<PlayerStatus>();
+                
+                if (_currentStatus != null)
                 {
-                    Debug.LogError($"[UI] Missing PlayerActionHandler on Actor {activeId}");
-                    return;
+                    _currentStatus.Relationship.OnValueChanged += OnStatsChanged;
+                    _currentStatus.Stress.OnValueChanged += OnStatsChanged;
+                    _currentStatus.PersonalMoney.OnValueChanged += OnMoneyChanged;
+                    UpdateSidebarUI();
                 }
-
-                bool isMyTurn = (netObj.OwnerClientId == NetworkManager.Singleton.LocalClientId);
-
-                locationNameText.text = loc.Config.LocationName;
-                descriptionText.text = isMyTurn ? loc.Config.Description : "Waiting for other player...";
-
-                foreach (Transform child in actionButtonsContainer) Destroy(child.gameObject);
-
-                for (int i = 0; i < loc.Config.AvailableActions.Count; i++)
-                {
-                    CreateActionButton(loc.Config.AvailableActions[i], isMyTurn, loc.Config.LocationId, i);
-                }
-
-                closeButton.interactable = isMyTurn; 
             }
         }
-        
-        private void CreateActionButton(LocationAction action, bool isInteractive, string locId, int actionIndex)
+
+        private void ClearUI()
         {
-            Button btn = Instantiate(actionButtonPrefab, actionButtonsContainer);
-            var btnText = btn.GetComponentInChildren<TextMeshProUGUI>();
+            _currentActionHandler = null;
+            _lastBoundLocationId = ""; 
 
-            if (btnText != null) 
+            // ซ่อนทุก Panel
+            foreach (var mapping in locationPanels)
             {
-                string costText = action.IsConsumeAllPoints ? "ALL" : $"-{action.PointCost * 6}s";
-                btnText.text = $"{action.ActionName} ({costText})";
+                if (mapping.PanelObject != null) mapping.PanelObject.SetActive(false);
             }
+            
+            UnbindPlayerStatus();
+        }
 
-            btn.interactable = isInteractive;
-
-            if (isInteractive)
+        private void UnbindPlayerStatus()
+        {
+            if (_currentStatus != null)
             {
-                btn.onClick.AddListener(() => OnActionClicked(locId, actionIndex));
+                _currentStatus.Relationship.OnValueChanged -= OnStatsChanged;
+                _currentStatus.Stress.OnValueChanged -= OnStatsChanged;
+                _currentStatus.PersonalMoney.OnValueChanged -= OnMoneyChanged;
+                _currentStatus = null;
             }
         }
         #endregion
 
-        #region Input Execution
-        private void OnCloseButtonClicked()
+        #region Sidebar Updates
+        private void OnStatsChanged(int oldV, int newV) => UpdateSidebarUI();
+        private void OnMoneyChanged(float oldV, float newV) => UpdateSidebarUI();
+
+        private void UpdateSidebarUI()
         {
-            if (TurnManager.Instance == null || !TurnManager.Instance.isInteractionOpen.Value) return;
-            if (_currentActionHandler == null) return;
+            if (_currentStatus == null) return;
 
-            ulong activeId = TurnManager.Instance.activeActorNetworkId.Value;
-            if (activeId == 0) return;
+            if (relationshipText != null) relationshipText.text = _currentStatus.Relationship.Value.ToString();
+            if (stressText != null) stressText.text = _currentStatus.Stress.Value.ToString();
+            if (moneyText != null) moneyText.text = _currentStatus.PersonalMoney.Value.ToString("N0");
 
-            _currentActionHandler.RequestCloseUI_ServerRpc();
+            int avatarIdx = _currentStatus.avatarIndex.Value;
+            if (avatarImage != null && avatarSprites != null && avatarIdx >= 0 && avatarIdx < avatarSprites.Length)
+            {
+                avatarImage.sprite = avatarSprites[avatarIdx];
+            }
+        }
+        #endregion
+
+        #region Public Methods for Buttons (ให้ UI Button ใน Unity เรียกใช้)
+        /// <summary>
+        /// ให้ปุ่ม Action ใน Unity ชี้มาที่ฟังก์ชันนี้ และใส่ Index ให้ตรงกับใน Config
+        /// </summary>
+        public void ExecuteAction(int actionIndex)
+        {
+            if (_currentActionHandler == null || string.IsNullOrEmpty(_lastBoundLocationId)) return;
+            _currentActionHandler.RequestExecuteLocationActionServerRpc(_lastBoundLocationId, actionIndex);
         }
 
-        private void OnActionClicked(string locId, int actionIndex)
+        /// <summary>
+        /// ให้ปุ่ม Close (X) ใน Unity ชี้มาที่ฟังก์ชันนี้
+        /// </summary>
+        public void CloseUI()
         {
             if (_currentActionHandler == null) return;
-            
-            PlayerActionHandler handlerToExecute = _currentActionHandler;
-            handlerToExecute.RequestExecuteLocationActionServerRpc(locId, actionIndex);
+            _currentActionHandler.RequestCloseUI_ServerRpc();
         }
         #endregion
     }

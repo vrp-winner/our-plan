@@ -13,7 +13,6 @@ namespace UI
         #region UI References
         [Header("References")]
         [SerializeField] private TextMeshProUGUI turnText;
-        [SerializeField] private TextMeshProUGUI cycleText;
         [SerializeField] private TextMeshProUGUI timeText;
 
         private bool _hasReceivedFirstSync = false;
@@ -26,7 +25,6 @@ namespace UI
             {
                 // 1. Subscribe Event
                 TurnManager.Instance.OnRoundChanged += UpdateTurnUI;
-                TurnManager.Instance.OnCycleChanged += UpdateCycleUI;
                 TurnManager.Instance.currentTime.OnValueChanged += OnTimeChanged;
 
                 // 2. Clear UI
@@ -34,7 +32,6 @@ namespace UI
 
                 // 3. Initial Sync
                 UpdateTurnUI(TurnManager.Instance.currentRound.Value);
-                UpdateCycleUI(TurnManager.Instance.currentCycle.Value);
                 OnTimeChanged(0, TurnManager.Instance.currentTime.Value);
             }
         }
@@ -45,7 +42,6 @@ namespace UI
             {
                 // Unsubscribe Event
                 TurnManager.Instance.OnRoundChanged -= UpdateTurnUI;
-                TurnManager.Instance.OnCycleChanged -= UpdateCycleUI;
                 TurnManager.Instance.currentTime.OnValueChanged -= OnTimeChanged;
             }
         }
@@ -55,7 +51,6 @@ namespace UI
         private void ClearInitialUI()
         {
             turnText.text = "";
-            cycleText.text = "";
             timeText.text = "";
         }
 
@@ -72,20 +67,13 @@ namespace UI
             int minutes = totalSeconds / 60;
             int seconds = totalSeconds % 60;
 
-            timeText.text = $"Time: {minutes:00}:{seconds:00}";
-            timeText.color = totalSeconds <= 20 ? Color.red : Color.white;
-        }
-
-        private void UpdateCycleUI(int cycle) 
-        {
-            if (cycle <= 0) return;
-            cycleText.text = $"Month: {cycle}";
+            timeText.text = $"{minutes:00}:{seconds:00}";
         }
         
         private void UpdateTurnUI(int turn) 
         {
             if (turn <= 0) return;
-            turnText.text = $"Round: {turn}";
+            turnText.text = $"{turn}";
         }
         #endregion
     }

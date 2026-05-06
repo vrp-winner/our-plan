@@ -24,6 +24,10 @@ namespace Configs
         
         [Tooltip("หากเปิด เมื่อทำ Action นี้จบจะบังคับจบเทิร์นทันที (แม้เวลาจะยังคงเหลืออยู่)")]
         [field: SerializeField] public bool EndsTurn { get; private set; }
+        
+        // ควบคุมว่า Action นี้กดได้แค่ครั้งเดียวต่อเทิร์นหรือไม่ (เช่น Date)
+        [Tooltip("หากเปิด Action นี้จะกดได้แค่ 1 ครั้งต่อ 1 เทิร์นเท่านั้น")]
+        [field: SerializeField] public bool IsOncePerTurn { get; private set; }
     }
 
     /// <summary>

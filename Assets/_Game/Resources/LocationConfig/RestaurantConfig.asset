@@ -18,8 +18,33 @@ MonoBehaviour:
   <AvailableActions>k__BackingField:
   - <ActionName>k__BackingField: Date
     <PointCost>k__BackingField: 3
-    <RelationshipEffect>k__BackingField: 1
-    <StressEffect>k__BackingField: 0
-    <MoneyEffect>k__BackingField: 0
+    <RelationshipEffect>k__BackingField: 25
+    <StressEffect>k__BackingField: -10
+    <MoneyEffect>k__BackingField: -90000
     <IsConsumeAllPoints>k__BackingField: 0
     <EndsTurn>k__BackingField: 0
+    <IsOncePerTurn>k__BackingField: 1
+  - <ActionName>k__BackingField: Buy (Set 1)
+    <PointCost>k__BackingField: 2
+    <RelationshipEffect>k__BackingField: 0
+    <StressEffect>k__BackingField: -5
+    <MoneyEffect>k__BackingField: -5000
+    <IsConsumeAllPoints>k__BackingField: 0
+    <EndsTurn>k__BackingField: 0
+    <IsOncePerTurn>k__BackingField: 0
+  - <ActionName>k__BackingField: Buy (Set 2)
+    <PointCost>k__BackingField: 2
+    <RelationshipEffect>k__BackingField: 0
+    <StressEffect>k__BackingField: -10
+    <MoneyEffect>k__BackingField: -10000
+    <IsConsumeAllPoints>k__BackingField: 0
+    <EndsTurn>k__BackingField: 0
+    <IsOncePerTurn>k__BackingField: 0
+  - <ActionName>k__BackingField: Buy (Set 3)
+    <PointCost>k__BackingField: 2
+    <RelationshipEffect>k__BackingField: 0
+    <StressEffect>k__BackingField: -15
+    <MoneyEffect>k__BackingField: -15000
+    <IsConsumeAllPoints>k__BackingField: 0
+    <EndsTurn>k__BackingField: 0
+    <IsOncePerTurn>k__BackingField: 0

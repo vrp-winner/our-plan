@@ -18,8 +18,9 @@ MonoBehaviour:
   <AvailableActions>k__BackingField:
   - <ActionName>k__BackingField: Date
     <PointCost>k__BackingField: 4
-    <RelationshipEffect>k__BackingField: 0
-    <StressEffect>k__BackingField: 0
-    <MoneyEffect>k__BackingField: 0
+    <RelationshipEffect>k__BackingField: 20
+    <StressEffect>k__BackingField: -20
+    <MoneyEffect>k__BackingField: -90000
     <IsConsumeAllPoints>k__BackingField: 0
     <EndsTurn>k__BackingField: 0
+    <IsOncePerTurn>k__BackingField: 1
