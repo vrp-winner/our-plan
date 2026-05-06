@@ -4,6 +4,8 @@ using Unity.Collections;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using static Systems.PlayerStatus;
+using Systems;
 
 namespace Managers
 {
@@ -20,6 +22,8 @@ namespace Managers
         [SerializeField] private int maxCycles = 15;
 
         private List<NetworkObject> _playerActors = new List<NetworkObject>();
+
+        public NetworkVariable<GameObjective> currentObjective = new NetworkVariable<GameObjective>();
 
         public NetworkVariable<ulong> activeActorNetworkId = new NetworkVariable<ulong>(0);
         public NetworkVariable<bool> isGameStartedState = new NetworkVariable<bool>(false);
@@ -140,6 +144,11 @@ namespace Managers
 
             if (_playerActors != null && _playerActors.Count > 0)
                 activeActorNetworkId.Value = _playerActors[0].NetworkObjectId;
+            if (IsServer)
+            {
+                currentObjective.Value = (GameObjective)UnityEngine.Random.Range(0, 4);
+                Debug.Log($"[Objective] เป้าหมายของเกมนี้คือ: {currentObjective.Value}");
+            }
         }
         
         /// <summary>
