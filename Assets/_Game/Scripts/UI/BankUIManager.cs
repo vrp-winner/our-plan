@@ -66,12 +66,12 @@ namespace UI
             if (EconomyManager.Instance == null || TurnManager.Instance == null) return;
 
             // 1. อัปเดตตัวหนังสือ
-            if (overdueMonthsText != null) overdueMonthsText.text = EconomyManager.Instance.RentLevel.Value.ToString();
+            if (overdueMonthsText != null) overdueMonthsText.text = EconomyManager.Instance.rentLevel.Value.ToString();
             
             float currentRent = EconomyManager.Instance.GetCurrentRentPrice();
             if (payRentAmountText != null) payRentAmountText.text = $"{(currentRent / 1000f)}K";
             
-            if (jointMoneyText != null) jointMoneyText.text = $"Joint Money: {EconomyManager.Instance.JointMoney.Value:N0}";
+            if (jointMoneyText != null) jointMoneyText.text = $"Joint Money: {EconomyManager.Instance.jointMoney.Value:N0}";
 
             // 2. เช็คว่าตานี้เป็นของตนเองหรือไม่
             ulong activeId = TurnManager.Instance.activeActorNetworkId.Value;
@@ -86,8 +86,8 @@ namespace UI
 
             bool hasPoints = pointSystem.PointsRemaining >= 2;
             float personalMoney = status.PersonalMoney.Value;
-            float jointMoney = EconomyManager.Instance.JointMoney.Value;
-            int rentLevel = EconomyManager.Instance.RentLevel.Value;
+            float jointMoney = EconomyManager.Instance.jointMoney.Value;
+            int rentLevel = EconomyManager.Instance.rentLevel.Value;
 
             // 3. จัดการเปิด/ปิดปุ่มอัตโนมัติ ตามเงินและ Point ที่เหลืออยู่
             for (int i = 0; i < depositButtons.Length; i++)
@@ -106,7 +106,7 @@ namespace UI
                 payRentButton.interactable = isMyPlayer && hasPoints && (rentLevel > 0) && (jointMoney >= currentRent);
 
             if (buyHouseButton != null) 
-                buyHouseButton.interactable = isMyPlayer && hasPoints && !EconomyManager.Instance.IsHouseBought.Value && (jointMoney >= 500000f);
+                buyHouseButton.interactable = isMyPlayer && hasPoints && !EconomyManager.Instance.isHouseBought.Value && (jointMoney >= 500000f);
 
         }
 

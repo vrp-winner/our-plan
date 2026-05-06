@@ -55,11 +55,7 @@ namespace Systems
             if (!action.IsConsumeAllPoints && !_pointSystem.HasEnoughPoints(action.PointCost)) return;
             
             // เช็คว่าถ้า Effect เงินติดลบ (แปลว่าต้องซื้อ/จ่าย) ผู้เล่นมีเงินพอไหม?
-            if (action.MoneyEffect < 0 && _status.PersonalMoney.Value < Mathf.Abs(action.MoneyEffect))
-            {
-                Debug.LogWarning("[Action] เงินส่วนตัวไม่พอสำหรับการทำ Action นี้!");
-                return;
-            }
+            if (action.MoneyEffect < 0 && _status.PersonalMoney.Value < Mathf.Abs(action.MoneyEffect)) return;
 
             // 1. หักแต้ม
             if (action.IsConsumeAllPoints) _pointSystem.ConsumeAllPoints();
@@ -74,7 +70,17 @@ namespace Systems
             // ถ้า Action นี้เป็นแบบ กดได้ครั้งเดียวต่อตา ให้บันทึกไว้ใน List
             if (action.IsOncePerTurn) UsedOncePerTurnActions.Add(actionKey);
 
-            // 4. เช็คเงื่อนไขบังคับจบเทิร์น
+            // ดักจับการซื้อรถจาก Shopping Mall
+            if (locationId == "LOC_ShoppingMall" && action.ActionName == "Buy (Car)")
+            {
+                if (EconomyManager.Instance != null && !EconomyManager.Instance.isCarBought.Value)
+                {
+                    EconomyManager.Instance.isCarBought.Value = true;
+                    Debug.Log("[Shopping] ซื้อรถสำเร็จ! ค่าเดินทางลดเหลือ 1 Point");
+                    EconomyManager.Instance.CheckWinCondition(OwnerClientId);
+                }
+            }
+
             if (action.EndsTurn && _pointSystem.PointsRemaining > 0)
             {
                 TurnManager.Instance.RequestEndTurnRpc();
@@ -101,22 +107,22 @@ namespace Systems
                     if (_status.PersonalMoney.Value >= amount)
                     {
                         _status.PersonalMoney.Value -= amount;
-                        EconomyManager.Instance.JointMoney.Value += amount;
+                        EconomyManager.Instance.jointMoney.Value += amount;
                         success = true;
                     }
                     break;
 
                 case BankActionType.Withdraw:
-                    if (EconomyManager.Instance.JointMoney.Value >= amount)
+                    if (EconomyManager.Instance.jointMoney.Value >= amount)
                     {
-                        EconomyManager.Instance.JointMoney.Value -= amount;
+                        EconomyManager.Instance.jointMoney.Value -= amount;
                         _status.PersonalMoney.Value += amount;
                         success = true;
                     }
                     break;
 
                 case BankActionType.PayRent:
-                    if (EconomyManager.Instance.RentLevel.Value > 0 && EconomyManager.Instance.JointMoney.Value >= EconomyManager.Instance.GetCurrentRentPrice())
+                    if (EconomyManager.Instance.rentLevel.Value > 0 && EconomyManager.Instance.jointMoney.Value >= EconomyManager.Instance.GetCurrentRentPrice())
                     {
                         EconomyManager.Instance.ExecutePayRent_ServerOnly();
                         success = true;
@@ -124,12 +130,13 @@ namespace Systems
                     break;
 
                 case BankActionType.BuyHouse:
-                    if (!EconomyManager.Instance.IsHouseBought.Value && EconomyManager.Instance.JointMoney.Value >= 500000f)
+                    if (!EconomyManager.Instance.isHouseBought.Value && EconomyManager.Instance.jointMoney.Value >= 500000f)
                     {
-                        EconomyManager.Instance.JointMoney.Value -= 500000f;
-                        EconomyManager.Instance.IsHouseBought.Value = true; 
+                        EconomyManager.Instance.jointMoney.Value -= 500000f;
+                        EconomyManager.Instance.isHouseBought.Value = true; 
                         success = true;
-                        TurnManager.Instance.NotifyEndGameRpc(OwnerClientId, true, "ร่วมกันซื้อบ้านเป้าหมายสำเร็จ! (Win)");
+                        Debug.Log("[Bank] ซื้อบ้านสำเร็จ!");
+                        EconomyManager.Instance.CheckWinCondition(OwnerClientId);
                     }
                     break;
             }

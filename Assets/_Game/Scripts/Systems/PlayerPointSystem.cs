@@ -137,8 +137,33 @@ namespace Systems
             // อัปเดตตำแหน่งปัจจุบัน
             CurrentLocationId = locationId;
 
-            // ปรับให้เปิด UI เสมอ ไม่ว่าเคยกด Action ไปแล้วหรือยัง
-            // เพื่อให้ผู้เล่นซื้อของต่อ หรือกดปุ่มอื่นๆ ได้ จนกว่าจะจบเทิร์น
+            // ดัก Logic ของ Apartment และ House ก่อนเปิด UI
+            if (locationId == "LOC_Apartment")
+            {
+                Debug.Log("[Location] เข้า Apartment -> บังคับจบเทิร์นทันที");
+                ConsumeAllPoints(); 
+                return; // Return ออกไปเลยเพื่อไม่ให้เปิด UI
+            }
+            else if (locationId == "LOC_House")
+            {
+                if (EconomyManager.Instance.isHouseBought.Value)
+                {
+                    Debug.Log("[Location] เข้า House (ซื้อแล้ว) -> ลดเครียด 10 และบังคับจบเทิร์น");
+                    if (TryGetComponent<PlayerStatus>(out var status))
+                    {
+                        // ลด Stress 10 
+                        status.ApplyStats_ServerOnly(0, -10, 0); 
+                    }
+                    ConsumeAllPoints();
+                }
+                else
+                {
+                    Debug.Log("[Location] เข้า House (ยังไม่ซื้อ) -> ไม่มีอะไรเกิดขึ้น เดินต่อไปได้");
+                }
+                return; // Return ออกไปเลยเพื่อไม่ให้เปิด UI
+            }
+
+            // สถานที่อื่นๆ เปิด UI ตามปกติ
             TurnManager.Instance.currentInteractionLocationId.Value = new FixedString64Bytes(locationId);
             TurnManager.Instance.isInteractionOpen.Value = true;
         }

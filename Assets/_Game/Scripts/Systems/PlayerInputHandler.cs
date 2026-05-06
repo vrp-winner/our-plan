@@ -54,7 +54,7 @@ namespace Systems
             if (!isMyTurn) return;
 
             // STEP 3: ป้องกันการกดซ้อนระหว่างเดิน
-            if (_playerMovement.IsMoving.Value) return;
+            if (_playerMovement.isMoving.Value) return;
             
             // STEP 3.5: ถ้า Interaction Panel เปิดอยู่ ห้ามขยับตัวเด็ดขาด
             if (TurnManager.Instance != null && TurnManager.Instance.isInteractionOpen.Value)

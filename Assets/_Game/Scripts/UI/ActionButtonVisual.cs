@@ -16,7 +16,6 @@ namespace UI
     {
         [Tooltip("ใส่ Index ของปุ่มนี้ให้ตรงกับใน Location Config (ค่าเดียวกับที่ใส่ใน OnClick)")]
         public int actionIndex;
-
         private Button _btn;
 
         private void Awake()
@@ -38,40 +37,48 @@ namespace UI
                 return;
             }
 
-            if (NetworkManager.Singleton != null && NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(activeId, out var netObj))
-            {
-                var actionHandler = netObj.GetComponent<PlayerActionHandler>();
-                var pointSystem = netObj.GetComponent<PlayerPointSystem>();
-                var status = netObj.GetComponent<PlayerStatus>();
+            if (!NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(activeId, out var netObj)) return;
+            if (netObj == null || !netObj.IsSpawned) return; 
 
-                if (actionHandler != null && pointSystem != null && status != null)
+            var actionHandler = netObj.GetComponent<PlayerActionHandler>();
+            var pointSystem = netObj.GetComponent<PlayerPointSystem>();
+            var status = netObj.GetComponent<PlayerStatus>();
+
+            if (actionHandler != null && pointSystem != null && status != null)
+            {
+                string locId = TurnManager.Instance.currentInteractionLocationId.Value.ToString();
+                if (string.IsNullOrEmpty(locId)) return;
+
+                bool isMyTurn = netObj.OwnerClientId == NetworkManager.Singleton.LocalClientId;
+                FixedString32Bytes actionKey = new FixedString32Bytes($"{locId}_{actionIndex}");
+                bool isUsed = actionHandler.UsedOncePerTurnActions.Contains(actionKey);
+
+                // เช็คพิเศษ: ถ้าเป็นปุ่มซื้อรถ และซื้อไปแล้ว ให้ปิดปุ่มถาวร
+                bool isCarAlreadyBought = false;
+                if (locId == "LOC_ShoppingMall" && EconomyManager.Instance != null)
                 {
-                    string locId = TurnManager.Instance.currentInteractionLocationId.Value.ToString();
-                    if (string.IsNullOrEmpty(locId)) return;
-                    
-                    // 1. เช็คว่าเป็นตาของตนเองหรือไม่? (ถ้าใช่ ถึงจะกดได้)
-                    bool isMyTurn = netObj.OwnerClientId == NetworkManager.Singleton.LocalClientId;
-                    
-                    // 2. เช็คว่า Action นี้ถูกตั้งเป็น Once Per Turn และเคยกดไปแล้วในตานี้หรือเปล่า? (ดึง Location + Index)
-                    FixedString32Bytes actionKey = new FixedString32Bytes($"{locId}_{actionIndex}");
-                    bool isUsed = actionHandler.UsedOncePerTurnActions.Contains(actionKey);
-                    
-                    // เช็คว่ามีเงินพอกับการจ่ายมั้ย?
-                    bool hasEnoughMoney = true;
-                    var locConfig = LocationRegistry.GetLocation(locId);
-                    if (locConfig != null && locConfig.Config.AvailableActions.Count > actionIndex)
+                    var config = LocationRegistry.GetLocation(locId);
+                    if (config != null && config.Config.AvailableActions.Count > actionIndex)
                     {
-                        float requiredMoney = locConfig.Config.AvailableActions[actionIndex].MoneyEffect;
-                        if (requiredMoney < 0) // ถ้า Effect ติดลบ (คือต้องจ่ายเงิน)
+                        if (config.Config.AvailableActions[actionIndex].ActionName == "Buy (Car)")
                         {
-                            hasEnoughMoney = status.PersonalMoney.Value >= Mathf.Abs(requiredMoney);
+                            isCarAlreadyBought = EconomyManager.Instance.isCarBought.Value;
                         }
                     }
-                    
-                    // 3. ปรับสถานะปุ่ม (ต้องเป็นตาเรา + ยังไม่เคยกดในตานี้ + มีเงินพอ)
-                    // (ในอนาคตถ้าอยากให้เช็ค Point Cost ด้วยว่าพอไหม สามารถมาเพิ่มเงื่อนไขตรงนี้ได้)
-                    _btn.interactable = isMyTurn && !isUsed && hasEnoughMoney;
                 }
+
+                bool hasEnoughMoney = true;
+                var locConfig = LocationRegistry.GetLocation(locId);
+                if (locConfig != null && locConfig.Config.AvailableActions.Count > actionIndex)
+                {
+                    float requiredMoney = locConfig.Config.AvailableActions[actionIndex].MoneyEffect;
+                    if (requiredMoney < 0) 
+                    {
+                        hasEnoughMoney = status.PersonalMoney.Value >= Mathf.Abs(requiredMoney);
+                    }
+                }
+
+                _btn.interactable = isMyTurn && !isUsed && !isCarAlreadyBought && hasEnoughMoney;
             }
         }
     }

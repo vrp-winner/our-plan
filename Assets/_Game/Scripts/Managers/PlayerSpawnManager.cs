@@ -64,7 +64,7 @@ namespace Managers
                 // STEP 3: ผูกสถานะ CurrentNodeId ทันทีเมื่อเกิด เพื่อให้ระบบเดินรู้จักจุดเริ่มต้น
                 if (playerInstance.TryGetComponent(out Systems.PlayerMovement movement) && startSpawnNode != null)
                 {
-                    movement.CurrentNodeId.Value = new FixedString64Bytes(startSpawnNode.NodeID);
+                    movement.currentNodeId.Value = new FixedString64Bytes(startSpawnNode.NodeID);
                 }
 
                 // STEP 4: อัปเดต Status และ Avatar

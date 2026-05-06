@@ -15,123 +15,115 @@ namespace Systems
     /// รับผิดชอบเรื่องการเดินตาม Path บนแกน 2D ล้วน
     /// เพิ่ม Server Validation Guard ครบถ้วน เพื่อป้องกัน Exploit
     /// </summary>
-    [RequireComponent(typeof(NetworkTransform))]
+    [RequireComponent(typeof(NetworkTransform), typeof(PlayerPointSystem))]
     public class PlayerMovement : NetworkBehaviour
     {
         [Header("Movement Settings")]
         [Tooltip("ความเร็วในการเดิน 2D (หน่วยต่อวินาที)")]
         [SerializeField] private float moveSpeed = 5f;
+        [SerializeField] private float dragBackSpeedMultiplier = 3f; 
 
         [Header("State (Network Synced)")]
         [Tooltip("สถานะล็อคการเดิน")]
-        public NetworkVariable<bool> IsMoving = new NetworkVariable<bool>(false);
+        public NetworkVariable<bool> isMoving = new NetworkVariable<bool>(false);
         [Tooltip("ID ของ Node ปัจจุบัน")]
-        public NetworkVariable<FixedString64Bytes> CurrentNodeId = new NetworkVariable<FixedString64Bytes>("");
+        public NetworkVariable<FixedString64Bytes> currentNodeId = new NetworkVariable<FixedString64Bytes>("");
 
         public event Action OnMovementStart;
         public event Action<MapNode> OnReachNode;
         public event Action OnMovementComplete;
 
-        /// <summary>
-        /// คำสั่ง Request ที่จะถูกตรวจสอบโดย Server 100%
-        /// </summary>
+        private PlayerPointSystem _pointSystem;
+
+        private void Awake()
+        {
+            _pointSystem = GetComponent<PlayerPointSystem>();
+        }
+
         [Rpc(SendTo.Server)]
         public void RequestMoveServerRpc(string targetNodeId)
         {
-            // STEP 1: RPC Spam Protection (เช็คสถานะและ Node เป้าหมาย)
-            if (IsMoving.Value) return;
-            if (targetNodeId == CurrentNodeId.Value.ToString()) return;
+            if (isMoving.Value) return;
+            if (targetNodeId == currentNodeId.Value.ToString()) return;
+            if (TurnManager.Instance == null || TurnManager.Instance.activeActorNetworkId.Value != this.NetworkObjectId) return;
 
-            // STEP 2: Server Turn Validation (กัน Client โกงเทิร์น)
-            if (TurnManager.Instance == null || TurnManager.Instance.activeActorNetworkId.Value != this.NetworkObjectId)
-            {
-                Debug.LogWarning($"[Security] ปฏิเสธการเดิน: ไม่ใช่เทิร์นของ NetworkObject {this.NetworkObjectId}");
-                return;
-            }
-
-            // STEP 3: ดึงข้อมูล Node
-            MapNode startNode = MapGraph.Instance.GetNode(CurrentNodeId.Value.ToString());
+            MapNode startNode = MapGraph.Instance.GetNode(currentNodeId.Value.ToString());
             MapNode endNode = MapGraph.Instance.GetNode(targetNodeId);
 
             if (startNode == null || endNode == null || !endNode.IsLocation) return;
 
-            // STEP 4: ค้นหา Path
             List<MapNode> path = PathfindingSystem.FindPath(startNode, endNode);
+            if (path == null || path.Count <= 1) return;
 
-            // STEP 5: Path Validation Guard (กัน Edge Case)
-            if (path == null || path.Count <= 1)
-            {
-                Debug.LogWarning("[Movement] ปฏิเสธการเดิน: ไม่พบเส้นทาง หรือเส้นทางสั้นเกินไป");
-                return;
-            }
+            // ถ้ามีรถ ค่าเดินจะเป็น 1, ถ้ายังไม่มีจะเป็น 2
+            int moveCost = (EconomyManager.Instance != null && EconomyManager.Instance.isCarBought.Value) ? 1 : 2; 
+            
+            bool isWalkOfShame = _pointSystem.PointsRemaining < moveCost;
 
-            // STEP 6: เริ่มกระบวนการเดิน
-            int distanceCost = path.Count - 1; 
-            IsMoving.Value = true;
-            StartCoroutine(MoveAlongPathCoroutine(path));
+            isMoving.Value = true;
+            StartCoroutine(MoveAlongPathCoroutine(path, moveCost, isWalkOfShame));
         }
 
-        /// <summary>
-        /// เดินทีละ Step ด้วย 2D Normalize ป้องกันความผิดพลาดจากการคำนวณ
-        /// </summary>
-        private IEnumerator MoveAlongPathCoroutine(List<MapNode> path)
+        private IEnumerator MoveAlongPathCoroutine(List<MapNode> path, int moveCost, bool isWalkOfShame)
         {
             OnMovementStart?.Invoke();
 
+            yield return StartCoroutine(ExecutePath(path, moveSpeed));
+
+            MapNode finalNode = path[path.Count - 1];
+            currentNodeId.Value = new FixedString64Bytes(finalNode.NodeID);
+
+            if (isWalkOfShame)
+            {
+                Debug.Log("[Movement] เวลาไม่พอ! โดนดึงกลับ Apartment อย่างไว!");
+                MapNode apartmentNode = MapGraph.Instance.GetNode("LOC_Apartment");
+                if (apartmentNode != null)
+                {
+                    List<MapNode> returnPath = PathfindingSystem.FindPath(finalNode, apartmentNode);
+                    if (returnPath != null && returnPath.Count > 1)
+                    {
+                        yield return StartCoroutine(ExecutePath(returnPath, moveSpeed * dragBackSpeedMultiplier));
+                        currentNodeId.Value = new FixedString64Bytes(apartmentNode.NodeID);
+                        finalNode = apartmentNode; 
+                    }
+                }
+                _pointSystem.ConsumeAllPoints();
+            }
+            else
+            {
+                _pointSystem.ConsumePoints(moveCost);
+                if (finalNode.IsLocation && _pointSystem.PointsRemaining > 0)
+                {
+                    _pointSystem.NotifyLocationEnter(finalNode.LocationID);
+                }
+            }
+
+            isMoving.Value = false;
+            OnMovementComplete?.Invoke();
+        }
+
+        private IEnumerator ExecutePath(List<MapNode> path, float speed)
+        {
             for (int i = 1; i < path.Count; i++)
             {
                 MapNode targetNode = path[i];
-
-                // STEP 1: Movement Safety Guard (กัน Coroutine พัง)
-                if (targetNode == null)
-                {
-                    Debug.LogError("[Movement] Safety Guard ทำงาน: พบ Node ปลายทางถูกทำลายระหว่างเดิน");
-                    IsMoving.Value = false;
-                    yield break;
-                }
+                if (targetNode == null) yield break;
                 
-                // STEP 2: Normalize Position (บังคับคำนวณเฉพาะ X, Y)
                 Vector2 targetPos2D = new Vector2(targetNode.transform.position.x, targetNode.transform.position.y);
 
                 while (true)
                 {
                     Vector2 currentPos2D = new Vector2(transform.position.x, transform.position.y);
-                    
-                    // เช็คระยะห่างเฉพาะแกน 2D
-                    if (Vector2.Distance(currentPos2D, targetPos2D) <= 0.01f)
-                        break;
+                    if (Vector2.Distance(currentPos2D, targetPos2D) <= 0.01f) break;
 
-                    // เคลื่อนที่ด้วยแกน 2D
-                    Vector2 newPos = Vector2.MoveTowards(currentPos2D, targetPos2D, moveSpeed * Time.deltaTime);
+                    Vector2 newPos = Vector2.MoveTowards(currentPos2D, targetPos2D, speed * Time.deltaTime);
                     transform.position = new Vector3(newPos.x, newPos.y, 0f);
-                    
                     yield return null;
                 }
 
-                // STEP 3: Snap ให้อยู่จุดศูนย์กลางเป๊ะๆ
                 transform.position = new Vector3(targetPos2D.x, targetPos2D.y, 0f);
-                CurrentNodeId.Value = new FixedString64Bytes(targetNode.NodeID);
-
                 OnReachNode?.Invoke(targetNode);
             }
-
-            IsMoving.Value = false;
-            
-            // ดึงข้อมูล Node สุดท้ายที่เราเดินมาถึง
-            MapNode finalNode = path[path.Count - 1];
-
-            // ถ้าจุดนี้เป็นสถานที่ (IsLocation) ให้เรียกใช้ระบบ UI
-            if (finalNode.IsLocation)
-            {
-                if (TryGetComponent(out PlayerPointSystem pointSystem))
-                {
-                    // ส่ง LocationID ไปที่ PointSystem เพื่อสั่งเปิด Interaction Panel
-                    pointSystem.NotifyLocationEnter(finalNode.LocationID);
-                    Debug.Log($"[Movement] ถึงที่หมาย: {finalNode.LocationID} สั่งเปิด UI");
-                }
-            }
-            
-            OnMovementComplete?.Invoke();
         }
     }
 }

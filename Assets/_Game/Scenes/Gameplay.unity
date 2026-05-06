@@ -9985,11 +9985,11 @@ PrefabInstance:
     - target: {fileID: 7165822464422971433, guid: 3f04c399b4fcf4146a0921bd356e51bc, type: 3}
       propertyPath: 'ConnectedNodes.Array.data[0]'
       value: 
-      objectReference: {fileID: 712882497}
+      objectReference: {fileID: 1407815317}
     - target: {fileID: 7165822464422971433, guid: 3f04c399b4fcf4146a0921bd356e51bc, type: 3}
       propertyPath: 'ConnectedNodes.Array.data[1]'
       value: 
-      objectReference: {fileID: 1407815317}
+      objectReference: {fileID: 712882497}
     - target: {fileID: 7363368203243654014, guid: 3f04c399b4fcf4146a0921bd356e51bc, type: 3}
       propertyPath: m_Icon
       value: 
@@ -10469,11 +10469,11 @@ PrefabInstance:
     - target: {fileID: 7165822464422971433, guid: 3f04c399b4fcf4146a0921bd356e51bc, type: 3}
       propertyPath: 'ConnectedNodes.Array.data[0]'
       value: 
-      objectReference: {fileID: 141866154}
+      objectReference: {fileID: 990770483}
     - target: {fileID: 7165822464422971433, guid: 3f04c399b4fcf4146a0921bd356e51bc, type: 3}
       propertyPath: 'ConnectedNodes.Array.data[1]'
       value: 
-      objectReference: {fileID: 990770483}
+      objectReference: {fileID: 141866154}
     - target: {fileID: 7363368203243654014, guid: 3f04c399b4fcf4146a0921bd356e51bc, type: 3}
       propertyPath: m_Icon
       value: 

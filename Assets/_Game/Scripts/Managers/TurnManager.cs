@@ -4,7 +4,6 @@ using Unity.Collections;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using static Systems.PlayerStatus;
 using Systems;
 
 namespace Managers
@@ -39,6 +38,9 @@ namespace Managers
         public event Action<int> OnRoundChanged;
         public event Action<int> OnCycleChanged;
         public event Action<bool> OnGameStateChanged;
+
+        // ตัวแปรกั้นการเบิ้ลคำสั่งจบเทิร์น (กันการเล่น 2 ตาติด)
+        private bool _isProcessingEndTurn = false;
         #endregion
 
         #region Properties
@@ -157,13 +159,19 @@ namespace Managers
         [Rpc(SendTo.Server)]
         public void RequestEndTurnRpc()
         {
-            if (!IsServer) return;
+            // [ดักจับกันเบิ้ลเทิร์น] 
+            if (!IsServer || _isProcessingEndTurn) return;
+            _isProcessingEndTurn = true; // เปิดกั้นคำสั่งซ้ำ
 
             // บังคับปิด Panel และล้าง LocationId
             currentInteractionLocationId.Value = new FixedString64Bytes("");
             isInteractionOpen.Value = false;
             
-            if (_playerActors.Count <= 1) return;
+            if (_playerActors.Count <= 1) 
+            {
+                _isProcessingEndTurn = false;
+                return;
+            }
 
             int nextIndex = (_currentActorIndex.Value + 1) % _playerActors.Count;
             
@@ -177,7 +185,9 @@ namespace Managers
                 {
                     currentCycle.Value++; // ขึ้นเดือนใหม่
                     if(EconomyManager.Instance != null)
-                        EconomyManager.Instance.ApplyRentChargeServerRpc();
+                    {
+                        EconomyManager.Instance.ApplyRentCharge_ServerOnly();
+                    }
                 }
             }
 
@@ -188,6 +198,15 @@ namespace Managers
                 NetworkObject nextActor = _playerActors[nextIndex];
                 activeActorNetworkId.Value = nextActor.NetworkObjectId;
             }
+
+            // ตั้งเวลาปลดกันเบิ้ล (0.5 วิ)
+            StartCoroutine(ResetTurnLock());
+        }
+
+        private IEnumerator ResetTurnLock()
+        {
+            yield return new WaitForSeconds(0.5f);
+            _isProcessingEndTurn = false;
         }
         
         private void HandleClientDisconnect(ulong clientId)
@@ -235,6 +254,7 @@ namespace Managers
                     _currentActorIndex.Value = disconnectedIndex - 1; 
                     if (_currentActorIndex.Value < 0) _currentActorIndex.Value = _playerActors.Count - 1;
                     
+                    _isProcessingEndTurn = false; // ปลดล็อกฉุกเฉิน
                     Debug.Log("[TurnManager] ข้ามเทิร์นอัตโนมัติ เนื่องจากคนเดินหลุด");
                     RequestEndTurnRpc();
                 }
@@ -267,8 +287,12 @@ namespace Managers
             if (NetworkManager.Singleton != null)
             {
                 NetworkManager.Singleton.Shutdown();
-                yield return new WaitWhile(() => NetworkManager.Singleton != null && NetworkManager.Singleton.ShutdownInProgress);
-                if (NetworkManager.Singleton != null) Destroy(NetworkManager.Singleton.gameObject);
+                // รอ 1 เฟรม ให้มันดับสนิท
+                yield return null;
+                if (NetworkManager.Singleton != null && NetworkManager.Singleton.gameObject != null) 
+                {
+                    Destroy(NetworkManager.Singleton.gameObject);
+                }
             }
 
             // ทำลาย Manager ทิ้ง

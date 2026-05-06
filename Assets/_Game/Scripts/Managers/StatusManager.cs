@@ -93,7 +93,7 @@ namespace Managers
                     break;
 
                 case GameObjective.RetireWealthy:
-                    isObjectiveCompleted = EconomyManager.Instance.JointMoney.Value >= 800000f;
+                    isObjectiveCompleted = EconomyManager.Instance.jointMoney.Value >= 800000f;
                     break;
 
                 case GameObjective.DateEverywhere:
