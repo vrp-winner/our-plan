@@ -111,7 +111,7 @@ namespace Managers
         /// ตรวจสอบเงื่อนไข Mission Failed
         /// </summary>
         /// <param name="status">สถานะผู้เล่นปัจจุบัน</param>
-        private void CheckFailConditions(PlayerStatus status)
+        public void CheckFailConditions(PlayerStatus status)
         {
             // หากความสัมพันธ์พัง หรือ เครียดทะลุปรอท ถือว่า  Mission Failed
             if (status.Relationship.Value <= 0)

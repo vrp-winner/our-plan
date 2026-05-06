@@ -1,5 +1,6 @@
 using UnityEngine;
 using Unity.Netcode;
+using Managers;
 
 namespace Systems
 {
@@ -54,6 +55,12 @@ namespace Systems
             PersonalMoney.Value += moneyChange;
 
             UpdateTeamRelationship(relChange);
+
+            if (StatusManager.Instance != null)
+            {
+                StatusManager.Instance.CheckFailConditions(this);
+                StatusManager.Instance.CheckWinConditions(this);
+            }
         }
 
         /// <summary>

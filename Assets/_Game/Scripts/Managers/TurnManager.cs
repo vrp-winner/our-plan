@@ -24,6 +24,8 @@ namespace Managers
 
         public NetworkVariable<GameObjective> currentObjective = new NetworkVariable<GameObjective>();
 
+        public event Action<bool, string> OnGameOverTriggered;
+
         public NetworkVariable<ulong> activeActorNetworkId = new NetworkVariable<ulong>(0);
         public NetworkVariable<bool> isGameStartedState = new NetworkVariable<bool>(false);
         public NetworkVariable<int> currentRound = new NetworkVariable<int>(1);
@@ -178,8 +180,13 @@ namespace Managers
             // Round จะเพิ่มขึ้น ก็ต่อเมื่อวนกลับมาที่ผู้เล่นคนแรกเท่านั้น
             if (nextIndex == 0)
             {
-                currentRound.Value++; 
+                currentRound.Value++;
 
+                if (currentRound.Value > 16)
+                {
+                    NotifyEndGameRpc(0, false, "หมดเวลา! (เล่นครบ 16 ตาแล้ว)");
+                    return;
+                }
                 // ทุกๆ 4 Rounds (เช่น จบ 4 ขึ้น 5, จบ 8 ขึ้น 9) ให้เปลี่ยนเดือน และเก็บค่าเช่า
                 if ((currentRound.Value - 1) % 4 == 0)
                 {
@@ -189,6 +196,7 @@ namespace Managers
                         EconomyManager.Instance.ApplyRentCharge_ServerOnly();
                     }
                 }
+              
             }
 
             _currentActorIndex.Value = nextIndex;
@@ -273,7 +281,8 @@ namespace Managers
         public void NotifyEndGameRpc(ulong playerId, bool isWin, string reason)
         {
             Debug.Log($"[Game Over] Player {playerId} {(isWin ? "ชนะ" : "แพ้")} - เหตุผล: {reason}");
-            
+
+            OnGameOverTriggered?.Invoke(isWin, reason);
             // หมายเหตุ: ตรงจุดนี้ในอนาคตอาจจะต้องเรียก UI "Game Over" ขึ้นมาแสดงผล
             // แล้วให้ผู้เล่นกดปุ่มเพื่อกลับหน้า Main Menu ด้วยตัวเอง (แทนที่จะเด้งออกทันที)
         }
