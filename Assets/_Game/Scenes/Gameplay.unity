@@ -1526,7 +1526,7 @@ PrefabInstance:
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 1334626362}
+    m_TransformParent: {fileID: 806642015}
     m_Modifications:
     - target: {fileID: 260830190355387200, guid: 83cbabe51fb073444bf191c23df7c8d2, type: 3}
       propertyPath: m_Sprite
@@ -4284,7 +4284,6 @@ GameObject:
   m_Component:
   - component: {fileID: 506655716}
   - component: {fileID: 506655718}
-  - component: {fileID: 506655717}
   m_Layer: 5
   m_Name: P2Panel
   m_TagString: Untagged
@@ -4312,36 +4311,6 @@ RectTransform:
   m_AnchoredPosition: {x: 657, y: -18}
   m_SizeDelta: {x: 500, y: 900}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &506655717
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 506655715}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
-  m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 0.392}
-  m_RaycastTarget: 1
-  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
-  m_Maskable: 1
-  m_OnCullStateChanged:
-    m_PersistentCalls:
-      m_Calls: []
-  m_Sprite: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
-  m_Type: 1
-  m_PreserveAspect: 0
-  m_FillCenter: 1
-  m_FillMethod: 4
-  m_FillAmount: 1
-  m_FillClockwise: 1
-  m_FillOrigin: 0
-  m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1
 --- !u!222 &506655718
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -5212,7 +5181,7 @@ PrefabInstance:
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 1334626362}
+    m_TransformParent: {fileID: 806642015}
     m_Modifications:
     - target: {fileID: 260830190355387200, guid: 83cbabe51fb073444bf191c23df7c8d2, type: 3}
       propertyPath: m_Sprite
@@ -5872,7 +5841,7 @@ PrefabInstance:
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 1334626362}
+    m_TransformParent: {fileID: 806642015}
     m_Modifications:
     - target: {fileID: 260830190355387200, guid: 83cbabe51fb073444bf191c23df7c8d2, type: 3}
       propertyPath: m_Sprite
@@ -6873,10 +6842,10 @@ RectTransform:
   - {fileID: 199829309}
   m_Father: {fileID: 1334626362}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_SizeDelta: {x: 1920, y: 1080}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &766254465
 MonoBehaviour:
@@ -7196,6 +7165,45 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 805589778}
   m_CullTransparentMesh: 1
+--- !u!1 &806642014
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 806642015}
+  m_Layer: 5
+  m_Name: GameUI_Container
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &806642015
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 806642014}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 272130495}
+  - {fileID: 673335390}
+  - {fileID: 1890517570}
+  - {fileID: 550300494}
+  m_Father: {fileID: 1334626362}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 1920, y: 1080}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1001 &826317101
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -9114,8 +9122,8 @@ Transform:
   m_GameObject: {fileID: 1180412485}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 7.25, z: 0}
-  m_LocalScale: {x: 1.06, y: 1.06, z: 1.06}
+  m_LocalPosition: {x: 0, y: 7, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 0}
@@ -10364,10 +10372,7 @@ RectTransform:
   - {fileID: 1440097010}
   - {fileID: 1794394695}
   - {fileID: 466314445}
-  - {fileID: 272130495}
-  - {fileID: 673335390}
-  - {fileID: 1890517570}
-  - {fileID: 550300494}
+  - {fileID: 806642015}
   - {fileID: 766254464}
   - {fileID: 1240943971}
   m_Father: {fileID: 0}
@@ -13718,9 +13723,9 @@ RectTransform:
   - {fileID: 277938225}
   m_Father: {fileID: 1334626362}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -507.5}
+  m_AnchorMin: {x: 0.5, y: 0}
+  m_AnchorMax: {x: 0.5, y: 0}
+  m_AnchoredPosition: {x: 0, y: 32.5}
   m_SizeDelta: {x: 274, y: 155}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1794394696
@@ -14613,7 +14618,7 @@ PrefabInstance:
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 1334626362}
+    m_TransformParent: {fileID: 806642015}
     m_Modifications:
     - target: {fileID: 260830190355387200, guid: 83cbabe51fb073444bf191c23df7c8d2, type: 3}
       propertyPath: m_Sprite
@@ -15373,7 +15378,7 @@ Camera:
   m_GameObject: {fileID: 2036395714}
   m_Enabled: 1
   serializedVersion: 2
-  m_ClearFlags: 1
+  m_ClearFlags: 2
   m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
