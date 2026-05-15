@@ -9,7 +9,7 @@ namespace Systems
         GetMarried,
         BuyHouseAndCar,
         RetireWealthy,
-        DateEverywhere
+        DateEveryPlaces
     }
 
     /// <summary>
@@ -55,12 +55,6 @@ namespace Systems
             PersonalMoney.Value += moneyChange;
 
             UpdateTeamRelationship(relChange);
-
-            if (StatusManager.Instance != null)
-            {
-                StatusManager.Instance.CheckFailConditions(this);
-                StatusManager.Instance.CheckWinConditions(this);
-            }
         }
 
         /// <summary>
@@ -71,10 +65,7 @@ namespace Systems
             var allPlayers = GameObject.FindObjectsByType<PlayerStatus>(FindObjectsSortMode.None);
             foreach (var p in allPlayers)
             {
-                if (p.teamId.Value == this.teamId.Value)
-                {
-                    p.Relationship.Value = Mathf.Clamp(p.Relationship.Value + change, 0, 100);
-                }
+                p.Relationship.Value = Mathf.Clamp(p.Relationship.Value + change, 0, 100);
             }
         }
 

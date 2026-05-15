@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using TMPro;
 using Systems;
 using Managers;
+using Unity.Netcode;
 
 namespace UI
 {
@@ -51,36 +52,69 @@ namespace UI
             summaryPanelRoot.SetActive(false);
 
             if (TurnManager.Instance != null)
-            {
                 TurnManager.Instance.OnGameOverTriggered += ShowSummary;
-            }
 
             if (backToMenuButton != null)
             {
                 backToMenuButton.onClick.AddListener(() =>
                 {
-                    if (Unity.Netcode.NetworkManager.Singleton != null)
-                        Unity.Netcode.NetworkManager.Singleton.Shutdown();
-
-                    UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
+                    backToMenuButton.interactable = false; // กันกดเบิ้ล
+                    StartCoroutine(ShutdownAndLeaveCoroutine());
                 });
             }
+        }
+        
+        private System.Collections.IEnumerator ShutdownAndLeaveCoroutine()
+        {
+            var net = NetworkManager.Singleton;
+            
+            if (net != null)
+            {
+                // เริ่ม shutdown
+                net.Shutdown();
+                
+                // รอจนระบบ “ไม่ active แล้วจริง ๆ”
+                yield return new WaitUntil(() => net == null || (!net.IsListening && !net.ShutdownInProgress));
+                
+                // กัน object ค้างใน scene
+                Destroy(net.gameObject);
+            }
+
+            // ทำลาย Manager ทิ้งกันข้ามซีน
+            var gs = GameObject.Find("GameSystem");
+            if (gs != null) Destroy(gs);
+
+            var lnm = GameObject.Find("LobbyNetworkManager");
+            if (lnm != null) Destroy(lnm);
+
+            // buffer 1 frame กัน race condition ของ scene load
+            yield return null; 
+            UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
         }
 
         private void OnDestroy()
         {
             if (TurnManager.Instance != null)
-            {
                 TurnManager.Instance.OnGameOverTriggered -= ShowSummary;
-            }
         }
-
+        
         public void ShowSummary(bool isWin, string reason)
         {
+            StartCoroutine(ShowSummaryCoroutine(isWin, reason));
+        }
+
+        private System.Collections.IEnumerator ShowSummaryCoroutine(bool isWin, string reason)
+        {
+            // รอให้ NetworkVariable sync มาถึง client ก่อน
+            yield return new WaitForSeconds(0.5f);
+            
             summaryPanelRoot.SetActive(true);
 
-            if (questText != null) questText.text = TurnManager.Instance.currentObjective.Value.ToString();
-            if (reasonText != null) reasonText.text = reason;
+            if (questText != null) 
+                questText.text = GetObjectiveText(TurnManager.Instance.currentObjective.Value);
+            
+            if (reasonText != null) 
+                reasonText.text = reason;
 
             PlayerStatus[] allPlayers = FindObjectsByType<PlayerStatus>(FindObjectsSortMode.None);
 
@@ -93,25 +127,38 @@ namespace UI
                 if (targetSlot.moneyText != null) targetSlot.moneyText.text = p.PersonalMoney.Value.ToString("N0");
                 
                 if (targetSlot.stressFillImage != null)
-                {
                     targetSlot.stressFillImage.fillAmount = p.Stress.Value / 100f; 
-                }
 
                 if (sharedRelationshipFillImage != null)
-                {
                     sharedRelationshipFillImage.fillAmount = p.Relationship.Value / 100f; 
-                }
 
                 int avatarIdx = p.avatarIndex.Value; 
                 if (avatarIdx >= 0 && avatarIdx < avatarSprites.Length)
-                {
                     targetSlot.avatarImage.sprite = avatarSprites[avatarIdx];
-                }
 
                 if (targetSlot.resultBannerImage != null)
-                {
                     targetSlot.resultBannerImage.sprite = isWin ? completedSprite : notCompletedSprite;
-                }
+            }
+        }
+        
+        private string GetObjectiveText(GameObjective obj)
+        {
+            switch (obj)
+            {
+                case GameObjective.GetMarried:
+                    return "Get married";
+
+                case GameObjective.BuyHouseAndCar:
+                    return "Buy a house & a car";
+
+                case GameObjective.RetireWealthy:
+                    return "Retired with $800,000";
+
+                case GameObjective.DateEveryPlaces:
+                    return "Dating every places";
+
+                default:
+                    return obj.ToString();
             }
         }
     }

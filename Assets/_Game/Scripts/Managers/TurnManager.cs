@@ -89,6 +89,16 @@ namespace Managers
             base.OnDestroy();
         }
         
+        // ปิด Network ตอนปิดเกม
+        private void OnApplicationQuit()
+        {
+            if (NetworkManager.Singleton != null &&
+                NetworkManager.Singleton.IsListening)
+            {
+                NetworkManager.Singleton.Shutdown();
+            }
+        }
+        
         /// <summary>
         /// บันทึก Avatar ของผู้เล่น
         /// </summary>
@@ -161,8 +171,20 @@ namespace Managers
         [Rpc(SendTo.Server)]
         public void RequestEndTurnRpc()
         {
-            // [ดักจับกันเบิ้ลเทิร์น] 
-            if (!IsServer || _isProcessingEndTurn) return;
+            // ดักจับกันเบิ้ลเทิร์น
+            if (!IsServer || _isProcessingEndTurn || !isGameStartedState.Value) return;
+            
+            // เช็ค Win/Fail ของคนที่เพิ่งจบเทิร์น
+            if (NetworkManager.Singleton.SpawnManager.SpawnedObjects
+                .TryGetValue(activeActorNetworkId.Value, out var netObj))
+            {
+                if (netObj.TryGetComponent<PlayerStatus>(out var status))
+                {
+                    StatusManager.Instance.CheckFailConditions(status);
+                    StatusManager.Instance.CheckWinConditions(status);
+                }
+            }
+            
             _isProcessingEndTurn = true; // เปิดกั้นคำสั่งซ้ำ
 
             // บังคับปิด Panel และล้าง LocationId
@@ -187,16 +209,24 @@ namespace Managers
                     NotifyEndGameRpc(0, false, "หมดเวลา! (เล่นครบ 16 ตาแล้ว)");
                     return;
                 }
-                // ทุกๆ 4 Rounds (เช่น จบ 4 ขึ้น 5, จบ 8 ขึ้น 9) ให้เปลี่ยนเดือน และเก็บค่าเช่า
-                if ((currentRound.Value - 1) % 4 == 0)
+
+                // 1. "แจ้งบิล" ค่าเช่า (เข้า Round 4, 8, 12, 16)
+                if (currentRound.Value % 4 == 0)
                 {
                     currentCycle.Value++; // ขึ้นเดือนใหม่
-                    if(EconomyManager.Instance != null)
+                    if (EconomyManager.Instance != null)
                     {
-                        EconomyManager.Instance.ApplyRentCharge_ServerOnly();
+                        EconomyManager.Instance.GenerateRentBill_ServerOnly();
                     }
                 }
-              
+                // 2. "ทำโทษ" คนค้างจ่าย (เข้า Round 5, 9, 13)
+                else if ((currentRound.Value - 1) % 4 == 0 && currentRound.Value > 1)
+                {
+                    if (EconomyManager.Instance != null)
+                    {
+                        EconomyManager.Instance.ApplyRentPenalty_ServerOnly();
+                    }
+                }
             }
 
             _currentActorIndex.Value = nextIndex;
@@ -249,8 +279,7 @@ namespace Managers
                     
                     if (_playerActors.Count == 1)
                     {
-                        NotifyEndGameRpc(_playerActors[0].OwnerClientId, true, "ผู้เล่นอื่นออกห้องหมดแล้ว คุณคือผู้ชนะ!");
-                        StartCoroutine(AutoKickToMainMenuCoroutine());
+                        StartCoroutine(AutoKickToMainMenuCoroutine(0f));
                     }
                     return; 
                 }
@@ -281,16 +310,24 @@ namespace Managers
         public void NotifyEndGameRpc(ulong playerId, bool isWin, string reason)
         {
             Debug.Log($"[Game Over] Player {playerId} {(isWin ? "ชนะ" : "แพ้")} - เหตุผล: {reason}");
+            
+            // ให้ Server เท่านั้นที่แก้ค่า NetworkVariable
+            if (IsServer)
+            {
+                isGameStartedState.Value = false;
+            }
 
             OnGameOverTriggered?.Invoke(isWin, reason);
-            // หมายเหตุ: ตรงจุดนี้ในอนาคตอาจจะต้องเรียก UI "Game Over" ขึ้นมาแสดงผล
-            // แล้วให้ผู้เล่นกดปุ่มเพื่อกลับหน้า Main Menu ด้วยตัวเอง (แทนที่จะเด้งออกทันที)
         }
         
-        private IEnumerator AutoKickToMainMenuCoroutine()
+        private IEnumerator AutoKickToMainMenuCoroutine(float delay = 3f)
         {
-            // โชว์หน้าเกมค้างไว้ 3 วินาที ให้เห็นข้อความว่าชนะ หรือรู้ตัวว่าเพื่อนหลุดหมดแล้ว
-            yield return new WaitForSeconds(3f);
+            // หน่วงเวลาตามที่ส่งมา
+            // ถ้า delay = 0 จะไม่รอ
+            if (delay > 0f)
+            {
+                yield return new WaitForSeconds(delay);
+            }
             
             // สั่งล้าง Network เหมือนที่ปุ่ม Exit to Menu ทำ
             if (NetworkManager.Singleton != null)

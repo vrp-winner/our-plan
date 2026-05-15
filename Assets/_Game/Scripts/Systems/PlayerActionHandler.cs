@@ -56,6 +56,13 @@ namespace Systems
             
             // เช็คว่าถ้า Effect เงินติดลบ (แปลว่าต้องซื้อ/จ่าย) ผู้เล่นมีเงินพอไหม?
             if (action.MoneyEffect < 0 && _status.PersonalMoney.Value < Mathf.Abs(action.MoneyEffect)) return;
+            
+            // เช็คเงื่อนไขแต่งงานก่อน
+            if (action.ActionName == "Buy (Ring)" && _status.Relationship.Value < 100)
+            {
+                Debug.Log("[Action] ความสัมพันธ์ยังไม่ถึง 100");
+                return;
+            }
 
             // 1. หักแต้ม
             if (action.IsConsumeAllPoints) _pointSystem.ConsumeAllPoints();
@@ -63,6 +70,24 @@ namespace Systems
 
             // 2. Apply สถานะตัวละคร
             _status.ApplyStats_ServerOnly(action.RelationshipEffect, action.StressEffect, action.MoneyEffect);
+            
+            // ดักจับการแต่งงาน
+            if (action.ActionName == "Buy (Ring)")
+            {
+                _status.IsMarried.Value = true;
+                Debug.Log("[Action] ซื้อแหวนสำเร็จ! สถานะ: แต่งงานแล้ว");
+            }
+            
+            // ดักจับการไปเดท
+            if (action.ActionName == "Date")
+            {
+                FixedString32Bytes loc32 = new FixedString32Bytes(locationId);
+                if (!_status.VisitedDatingSpots.Contains(loc32))
+                {
+                    _status.VisitedDatingSpots.Add(loc32);
+                    Debug.Log($"[Action] ไปเดทที่ {locationId} (รวมไปเดทมาแล้ว {_status.VisitedDatingSpots.Count} ที่)");
+                }
+            }
 
             // 3. มาร์คสถานะสถานที่นี้ว่าได้ทำ Action ไปแล้ว เพื่อให้ UI รู้
             _pointSystem.MarkLocationAsInteracted(locationId);
@@ -77,7 +102,6 @@ namespace Systems
                 {
                     EconomyManager.Instance.isCarBought.Value = true;
                     Debug.Log("[Shopping] ซื้อรถสำเร็จ! ค่าเดินทางลดเหลือ 1 Point");
-                    EconomyManager.Instance.CheckWinCondition(OwnerClientId);
                 }
             }
 
@@ -109,6 +133,7 @@ namespace Systems
                         _status.PersonalMoney.Value -= amount;
                         EconomyManager.Instance.jointMoney.Value += amount;
                         success = true;
+                        _status.ApplyStats_ServerOnly(5, -5, 0); // ฝาก: Relationship +5, Stress -5
                     }
                     break;
 
@@ -118,14 +143,16 @@ namespace Systems
                         EconomyManager.Instance.jointMoney.Value -= amount;
                         _status.PersonalMoney.Value += amount;
                         success = true;
+                        _status.ApplyStats_ServerOnly(-5, 5, 0); // ถอน: Relationship -5, Stress +5
                     }
                     break;
 
                 case BankActionType.PayRent:
-                    if (EconomyManager.Instance.rentLevel.Value > 0 && EconomyManager.Instance.jointMoney.Value >= EconomyManager.Instance.GetCurrentRentPrice())
+                    if (EconomyManager.Instance.pendingBills.Value > 0 && EconomyManager.Instance.jointMoney.Value >= EconomyManager.Instance.GetCurrentRentPrice())
                     {
                         EconomyManager.Instance.ExecutePayRent_ServerOnly();
                         success = true;
+                        _status.ApplyStats_ServerOnly(5, -5, 0); // จ่ายค่าเช่า: Relationship +5, Stress -5
                     }
                     break;
 
@@ -136,7 +163,7 @@ namespace Systems
                         EconomyManager.Instance.isHouseBought.Value = true; 
                         success = true;
                         Debug.Log("[Bank] ซื้อบ้านสำเร็จ!");
-                        EconomyManager.Instance.CheckWinCondition(OwnerClientId);
+                        _status.ApplyStats_ServerOnly(0, -10, 0); // ซื้อบ้าน: Stress -10
                     }
                     break;
             }

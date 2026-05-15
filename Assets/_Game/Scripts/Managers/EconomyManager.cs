@@ -16,33 +16,43 @@ namespace Managers
 
         [Header("Rent Configuration")]
         [SerializeField] private float baseRent = 9000f;
+        
+        // จำนวนบิลที่ค้างชำระ (ใช้คูณค่าเช่า เช่น ค้าง 2 บิล = 18K)
+        public NetworkVariable<int> pendingBills = new NetworkVariable<int>(0);
 
-        // RentLevel คือ จำนวน "เดือน" ที่ค้างชำระ
+        // จำนวนเดือนที่ Overdue (ใช้ลงโทษตามขั้นบันได)
         public NetworkVariable<int> rentLevel = new NetworkVariable<int>(0);
 
         public float GetCurrentRentPrice()
         {
-            if (rentLevel.Value == 0) return 0;
-            return baseRent;
+            return pendingBills.Value * baseRent; // ค้างกี่บิล เอาไปคูณ 9000
         }
-
-        public void ApplyRentCharge_ServerOnly()
+        
+        // เรียกตอนเข้า Round 4, 8, 12 (บิลมา แต่ยังไม่โดนปรับ Overdue)
+        public void GenerateRentBill_ServerOnly()
+        {
+            if (!IsServer) return;
+            pendingBills.Value++;
+            Debug.Log($"[Economy] บิลค่าเช่ามาแล้ว! ยอดรวม: {GetCurrentRentPrice()} (Overdue: {rentLevel.Value})");
+        }
+        
+        // เรียกตอนเข้า Round 5, 9, 13 (ปรับ Overdue ตามบิลที่ค้าง)
+        public void ApplyRentPenalty_ServerOnly()
         {
             if (!IsServer) return;
 
-            rentLevel.Value++;
-            Debug.Log($"[Economy] ถึงรอบจ่ายค่าเช่า! (ค้างชำระ: {rentLevel.Value} ยอด) ต้องจ่าย: {GetCurrentRentPrice()}");
+            // อัปเดตยอด Overdue ให้เท่ากับจำนวนบิลที่ยังไม่ได้จ่าย
+            rentLevel.Value = pendingBills.Value;
 
-            // ทำโทษทันทีตามจำนวนเดือนที่ค้าง (1 เดือน = -15, 2 เดือน = -30, ...)
-            if (StatusManager.Instance != null)
+            if (rentLevel.Value > 0)
             {
-                StatusManager.Instance.ApplyGlobalRentPenalty(rentLevel.Value);
-            }
+                Debug.Log($"[Economy] โดนทำโทษค่าเช่า! (ค้างชำระ: {rentLevel.Value} เดือน)");
 
-            // ถ้าค้างเดือนที่ 4 จบเกม
-            if (rentLevel.Value >= 4)
-            {
-                TurnManager.Instance.NotifyEndGameRpc(0, false, "ล้มละลาย (ค้างค่าเช่า 4 เดือนติดต่อกัน)");
+                if (StatusManager.Instance != null)
+                {
+                    // ส่งจำนวนเดือนที่ค้างไปลงโทษ (1 เดือน = 15, 2 เดือน = 30, 3 เดือน = 50)
+                    StatusManager.Instance.ApplyGlobalRentPenalty(rentLevel.Value);
+                }
             }
         }
 
@@ -51,10 +61,11 @@ namespace Managers
             if (!IsServer) return;
 
             float totalPrice = GetCurrentRentPrice();
-            if (rentLevel.Value > 0 && jointMoney.Value >= totalPrice)
+            if (pendingBills.Value > 0 && jointMoney.Value >= totalPrice)
             {
                 jointMoney.Value -= totalPrice;
-                rentLevel.Value = 0; // จ่ายปุ๊บ เคลียร์ยอดค้างเป็น 0
+                pendingBills.Value = 0; // ล้างบิล
+                rentLevel.Value = 0;    // ล้างยอด Overdue
                 Debug.Log($"[Economy] จ่ายค่าเช่าสำเร็จ! เงินกองกลางเหลือ: {jointMoney.Value}");
             }
         }

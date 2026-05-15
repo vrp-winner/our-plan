@@ -1,6 +1,7 @@
 using UnityEngine;
 using TMPro;
 using Managers;
+using Systems;
 
 namespace UI
 {
@@ -14,6 +15,7 @@ namespace UI
         [Header("References")]
         [SerializeField] private TextMeshProUGUI turnText;
         [SerializeField] private TextMeshProUGUI timeText;
+        [SerializeField] private TextMeshProUGUI objectiveText;
 
         private bool _hasReceivedFirstSync = false;
         #endregion
@@ -26,6 +28,7 @@ namespace UI
                 // 1. Subscribe Event
                 TurnManager.Instance.OnRoundChanged += UpdateTurnUI;
                 TurnManager.Instance.currentTime.OnValueChanged += OnTimeChanged;
+                TurnManager.Instance.currentObjective.OnValueChanged += OnObjectiveChanged;
 
                 // 2. Clear UI
                 ClearInitialUI();
@@ -33,6 +36,7 @@ namespace UI
                 // 3. Initial Sync
                 UpdateTurnUI(TurnManager.Instance.currentRound.Value);
                 OnTimeChanged(0, TurnManager.Instance.currentTime.Value);
+                OnObjectiveChanged(TurnManager.Instance.currentObjective.Value, TurnManager.Instance.currentObjective.Value);
             }
         }
         
@@ -43,6 +47,7 @@ namespace UI
                 // Unsubscribe Event
                 TurnManager.Instance.OnRoundChanged -= UpdateTurnUI;
                 TurnManager.Instance.currentTime.OnValueChanged -= OnTimeChanged;
+                TurnManager.Instance.currentObjective.OnValueChanged -= OnObjectiveChanged;
             }
         }
         #endregion
@@ -76,5 +81,29 @@ namespace UI
             turnText.text = $"{turn}";
         }
         #endregion
+        
+        private void OnObjectiveChanged(GameObjective oldObj, GameObjective newObj)
+        {
+            if (objectiveText == null) return;
+
+            switch (newObj)
+            {
+                case GameObjective.GetMarried:
+                    objectiveText.text = "Objective:\nGet married";
+                    break;
+
+                case GameObjective.BuyHouseAndCar:
+                    objectiveText.text = "Objective:\nBuy a house & a car";
+                    break;
+
+                case GameObjective.RetireWealthy:
+                    objectiveText.text = "Objective:\nRetired with $800,000";
+                    break;
+
+                case GameObjective.DateEveryPlaces:
+                    objectiveText.text = "Objective:\nDating every places";
+                    break;
+            }
+        }
     }
 }

@@ -141,6 +141,11 @@ namespace Systems
             if (locationId == "LOC_Apartment")
             {
                 Debug.Log("[Location] เข้า Apartment -> บังคับจบเทิร์นทันที");
+                
+                // ระบบกลับบ้าน
+                if (TryGetComponent<PlayerStatus>(out var status))
+                    StatusManager.Instance.ProcessHomeEntry(status);
+                
                 ConsumeAllPoints(); 
                 return; // Return ออกไปเลยเพื่อไม่ให้เปิด UI
             }
@@ -153,6 +158,9 @@ namespace Systems
                     {
                         // ลด Stress 10 
                         status.ApplyStats_ServerOnly(0, -10, 0); 
+                        
+                        // ระบบกลับบ้าน
+                        StatusManager.Instance.ProcessHomeEntry(status);
                     }
                     ConsumeAllPoints();
                 }
